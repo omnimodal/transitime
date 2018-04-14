@@ -9,3 +9,5 @@
 *.ear
 /bin/
 /.settings/
+/data/
+
