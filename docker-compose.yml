@@ -1,0 +1,54 @@
+version: '2'
+services:
+  web:
+    build: 
+      context: .
+      dockerfile: Dockerfile.web
+      args:
+        - POSTGRES_PORT_5432_TCP_ADDR=db
+        - POSTGRES_PORT_5432_TCP_PORT=5432
+        - POSTGRES_USER=postgres
+        - PGPASSWORD=transitclock
+        - AGENCYNAME=IRIDE
+        - GTFSRTVEHICLEPOSITIONS="https://magpie.omnimodal.io/iride/vehicle-positions"
+    ports:
+      - "8080:8080"
+    networks:
+      - transitclock
+    depends_on:
+      - db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=transitclock
+      - POSTGRES_DB=IRIDE
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT_5432_TCP_ADDR=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_PORT_5432_TCP_PORT=5432
+      - PGPASSWORD=transitclock
+      - AGENCYID=1
+      - AGENCYNAME=IRIDE
+      - GTFS_URL="https://data.omnimodal.io/gtfs/iride-fl-us/iride-fl-us.zip"
+      - GTFSRTVEHICLEPOSITIONS="https://magpie.omnimodal.io/iride/vehicle-positions"
+      - API_KEY_DESCRIPTION="Test"
+      - API_KEY_EMAIL="nathan@omnimodal.io"
+      - API_KEY_NAME="Nathan Selikoff"
+      - API_KEY_PHONE="407-319-5198"
+      - API_KEY_URL="https://omnimodal.io"
+  db:
+    build:
+      context: .
+      dockerfile: Dockerfile.db
+    restart: always
+    ports:
+      - 5432
+    networks:
+      - transitclock
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=transitclock
+      - POSTGRES_DB=IRIDE
+networks:
+  transitclock:
