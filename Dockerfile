@@ -14,6 +14,7 @@ RUN cp jq /usr/bin/
 WORKDIR /
 RUN mkdir /usr/local/transitclock
 RUN mkdir /usr/local/transitclock/config
+RUN mkdir /usr/local/transitclock/db
 RUN mkdir /usr/local/transitclock/logs
 RUN mkdir /usr/local/transitclock/cache
 RUN mkdir /usr/local/transitclock/data
@@ -21,25 +22,19 @@ RUN mkdir /usr/local/transitclock/test
 RUN mkdir /usr/local/transitclock/test/config
 
 ADD transitclock/target/*.jar /usr/local/transitclock/
-ADD transitclockApi/target/api.war /usr/local/tomcat/webapps
-ADD transitclockWebapp/target/web.war /usr/local/tomcat/webapps
+ADD transitclockApi/target/api.war $CATALINA_HOME/webapps
+ADD transitclockWebapp/target/web.war $CATALINA_HOME/webapps
+
+# replace index.jsp for default web app, redirect to /web
+ADD config/redirect.jsp $CATALINA_HOME/webapps/ROOT/index.jsp
 
 ADD config/postgres_hibernate.cfg.xml /usr/local/transitclock/config/hibernate.cfg.xml
 ADD config/transitclockConfig.xml /usr/local/transitclock/config/transitclockConfig.xml
+ADD config/tomcat-users.xml $CATALINA_HOME/conf/tomcat-users.xml
 ADD transitclock/src/main/resources/logbackGtfs.xml /usr/local/transitclock/config/logbackGtfs.xml
+ADD transitclock/target/classes/ddl_postgres*.sql /usr/local/transitclock/db/
 
 ADD bin/*.sh /
 
-# these will be available to intermediate containers during build
-# as long as we supply them from docker-compose
-ARG POSTGRES_PORT_5432_TCP_ADDR
-ARG POSTGRES_PORT_5432_TCP_PORT
-ARG POSTGRES_USER
-ARG PGPASSWORD
-ARG AGENCYNAME
-ARG GTFSRTVEHICLEPOSITIONS
-
-# search and replace in the config files
-RUN /set_config.sh
-
+# CMD ["tail", "-f", "/dev/null"]
 CMD ["./check_db_up.sh", "./start_transitclock.sh"]

@@ -11,3 +11,5 @@
 /.settings/
 /data/
 
+.env
+.DS_Store

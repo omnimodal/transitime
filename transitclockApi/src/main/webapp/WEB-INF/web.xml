@@ -36,5 +36,24 @@
 	    <filter-name>ApiLoggingFilter</filter-name>
 	    <url-pattern>/*</url-pattern>
 	  </filter-mapping> 
+
+  <security-constraint>
+    <web-resource-collection>
+      <url-pattern>/*</url-pattern>
+    </web-resource-collection>
+    <auth-constraint>
+      <role-name>transitclock-admin</role-name>
+    </auth-constraint>
+  </security-constraint>
+
+    <security-role>
+        <role-name>transitclock-admin</role-name>
+    </security-role>
+
+  <login-config>
+    <auth-method>BASIC</auth-method>
+    <realm-name>The Transit Clock Realm</realm-name>
+  </login-config>
+
 </web-app>
 

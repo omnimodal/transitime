@@ -1,4 +1,0 @@
-FROM postgres:9.6
-MAINTAINER nathan@omnimodal.io
-
-ADD transitclock/target/classes/ddl_postgres*.sql /docker-entrypoint-initdb.d/
