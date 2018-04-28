@@ -19,10 +19,20 @@ export CATALINA_OPTS="$CATALINA_OPTS -Dwebapp.user=$WEBAPP_USER -Dwebapp.passwor
 /usr/local/tomcat/bin/startup.sh
 
 nohup java -Xss12m \
-	-Duser.timezone=EST \
-	-Dtransitclock.configFiles=/usr/local/transitclock/config/transitclockConfig.xml \
+	-Duser.timezone=$TIMEZONE \
+	-Dtransitclock.core.timezone=$TIMEZONE \
+	-Dlogback.timezone=$TIMEZONE
+	-Dlogback.errorEmail=$EMAIL_RECIPIENTS \
+	-Dlogback.smtpHost=$SMTP_HOST \
+	-Dlogback.smtpUsername=$SMTP_USERNAME \
+	-Dlogback.smtpPassword=$SMTP_PASSWORD \
+	-Dlogback.configurationFile=/usr/local/transitclock/config/logbackCustom.xml \
 	-Dtransitclock.core.agencyId=$AGENCYID \
 	-Dtransitclock.logging.dir=/usr/local/transitclock/logs/ \
+	-Dtransitclock.monitoring.avlFeedEmailRecipients=$EMAIL_RECIPIENTS \
+	-Dtransitclock.monitoring.emailRecipients=$EMAIL_RECIPIENTS \
+	-Dtransitclock.schedBasedPreds.pollingRateMsec=$SCHED_BASED_PREDS_POLLING_RATE_MSEC \
+	-Dtransitclock.configFiles=/usr/local/transitclock/config/transitclockConfig.xml \
 	-jar /usr/local/transitclock/Core.jar \
 	-configRev 0 > /usr/local/transitclock/logs/output.txt &
 

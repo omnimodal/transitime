@@ -5,7 +5,7 @@
         <!-- GtfsRealtimeModule read a GTFS vehicle location feed as the source of AVL data. -->
         <!-- PredictionAccuracyModule is used to store the transiTime prediction and record their accuracy. Look in class for comments explaining detail. -->
         <!-- GTFSRealtimePredictionAccuracyModule is used to store an alternative source of predictions and again record there accuracy based on actual arrival/departure times -->
-        <optionalModulesList>org.transitclock.avl.GtfsRealtimeModule;org.transitclock.core.predAccuracy.PredictionAccuracyModule;org.transitclock.core.predAccuracy.gtfsrt.GTFSRealtimePredictionAccuracyModule</optionalModulesList>
+        <optionalModulesList>org.transitclock.avl.GtfsRealtimeModule;org.transitclock.core.predAccuracy.PredictionAccuracyModule;org.transitclock.core.schedBasedPreds.SchedBasedPredsModule</optionalModulesList>
     </modules>
     <!-- <gtfs> -->
     	<!-- <routeIdFilterRegEx>6</routeIdFilterRegEx> -->
@@ -46,7 +46,7 @@
         <maxLongitude>-97.495917</maxLongitude>
          -->
 
-        <feedPollingRateSecs>10</feedPollingRateSecs>
+        <feedPollingRateSecs>FEED_POLLING_RATE_SECS</feedPollingRateSecs>
 
     </avl>
     <db>
