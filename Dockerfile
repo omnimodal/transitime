@@ -31,7 +31,8 @@ ADD config/redirect.jsp $CATALINA_HOME/webapps/ROOT/index.jsp
 ADD config/postgres_hibernate.cfg.xml /usr/local/transitclock/config/hibernate.cfg.xml
 ADD config/transitclockConfig.xml /usr/local/transitclock/config/transitclockConfig.xml
 ADD config/tomcat-users.xml $CATALINA_HOME/conf/tomcat-users.xml
-ADD config/logbackCustom.xml /usr/local/transitclock/config/logbackCustom.xml
+ADD config/logback.development.xml /usr/local/transitclock/config/logback.development.xml
+ADD config/logback.production.xml /usr/local/transitclock/config/logback.production.xml
 ADD transitclock/src/main/resources/logbackGtfs.xml /usr/local/transitclock/config/logbackGtfs.xml
 ADD transitclock/target/classes/ddl_postgres*.sql /usr/local/transitclock/db/
 

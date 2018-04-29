@@ -19,14 +19,20 @@ export CATALINA_OPTS="$CATALINA_OPTS -Dwebapp.user=$WEBAPP_USER -Dwebapp.passwor
 /usr/local/tomcat/bin/startup.sh
 
 nohup java -Xss12m \
+	-Dtransitclock.environmentName=$ENVIRONMENT_NAME \
 	-Duser.timezone=$TIMEZONE \
 	-Dtransitclock.core.timezone=$TIMEZONE \
-	-Dlogback.timezone=$TIMEZONE
+	-Dlogback.timezone=$TIMEZONE \
 	-Dlogback.errorEmail=$EMAIL_RECIPIENTS \
 	-Dlogback.smtpHost=$SMTP_HOST \
 	-Dlogback.smtpUsername=$SMTP_USERNAME \
 	-Dlogback.smtpPassword=$SMTP_PASSWORD \
-	-Dlogback.configurationFile=/usr/local/transitclock/config/logbackCustom.xml \
+	-Dlogback.cloudWatch.region=$CLOUDWATCH_REGION \
+	-Dlogback.cloudWatch.logGroup=/transitclock/$ENVIRONMENT_NAME/$AGENCYNAME \
+	-Dtransitclock.cloudwatch.awsAccessKey=$AWS_ACCESS_KEY_ID \
+	-Dtransitclock.cloudwatch.awsSecretKey=$AWS_SECRET_ACCESS_KEY \
+	-Dtransitclock.cloudwatch.awsEndpoint=$CLOUDWATCH_MONITORING_ENDPOINT \
+	-Dlogback.configurationFile=/usr/local/transitclock/config/logback.$ENVIRONMENT_NAME.xml \
 	-Dtransitclock.core.agencyId=$AGENCYID \
 	-Dtransitclock.logging.dir=/usr/local/transitclock/logs/ \
 	-Dtransitclock.monitoring.avlFeedEmailRecipients=$EMAIL_RECIPIENTS \
