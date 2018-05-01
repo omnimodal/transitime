@@ -43,6 +43,10 @@
   
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 <title>Schedule Adherence</title>
+
+  <!-- Load javascript and css files -->
+  <%@include file="/template/includes.jsp" %>
+
 </head>
 <body>
   <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header"> 

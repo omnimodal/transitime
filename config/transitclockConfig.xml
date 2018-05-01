@@ -60,7 +60,7 @@
         <configFile>/usr/local/transitclock/config/hibernate.cfg.xml</configFile>
     </hibernate>
     <web>
-    	<mapTileUrl>http://tile.openstreetmap.org/{z}/{x}/{y}.png</mapTileUrl>
-    	<mapTileCopyright>openstreetmap</mapTileCopyright>
+    	<mapTileUrl>https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png</mapTileUrl>
+    	<mapTileCopyright>carto, openstreetmap</mapTileCopyright>
     </web>
 </transitclock>

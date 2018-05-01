@@ -46,12 +46,12 @@ if (agencyId == null || agencyId.isEmpty()) {
     		  var schedule = jsonData.schedule[i];
     		  
     		  // Create title for schedule
-    		  $('body').append("<div id='scheduleTitle'>" 
+    		  $('#report').append("<div id='scheduleTitle'>" 
     				  + "Direction: " + schedule.directionId 
     				  + ", Service: " + schedule.serviceName
     				  + "</div>");
 
-    		  var table = $("<table id='dataTable'></table>").appendTo('body')[0];
+    		  var table = $("<table id='dataTable'></table>").appendTo('#report')[0];
     		  
     		  // Create the columns for the header. First column is stop name. And then there
     		  // is one column per trip.
@@ -122,6 +122,7 @@ if (agencyId == null || agencyId.isEmpty()) {
   <div class="mdl-cell mdl-cell--6-col">
 
 <div id="title" class="mdl-layout-title"></div>
+<div id="report"></div>
 
 			</div>
 			<div class="mdl-cell mdl-cell--3-col"></div>

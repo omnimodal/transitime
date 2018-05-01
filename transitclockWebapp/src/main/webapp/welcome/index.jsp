@@ -28,6 +28,8 @@ for (WebAgency webAgency : webAgencies) {
 		continue;
 	%>
 
+<h2><%= webAgency.getAgencyName() %></h2>
+
 <div class="demo-card-square mdl-card mdl-shadow--2dp">
   <div class="mdl-card__title mdl-card--expand">
     <h2 class="mdl-card__title-text">Maps</h2>
