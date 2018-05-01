@@ -14,10 +14,18 @@
   <link href="params/reportParams.css" rel="stylesheet"/>  
 </head>
 <body>
+  <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header"> 
+ 
+    <%@include file="/template/header.jsp" %>
+ 
+ <main class="mdl-layout__content">
+	<div class="page-content">
 
-<%@include file="/template/header.jsp" %>
+<div class="mdl-grid">
+  <div class="mdl-cell mdl-cell--3-col"></div>
+  <div class="mdl-cell mdl-cell--6-col">
 
-<div id="title">
+<div id="title" class="mdl-layout-title">
    Select Parameters for Schedule Report
 </div>
    
@@ -31,6 +39,28 @@
     <jsp:include page="params/submitReport.jsp" />
   </form>
 </div>
+
+			</div>
+			<div class="mdl-cell mdl-cell--3-col"></div>
+		</div>
+		</div>
+	</main>
+
+<footer class="mdl-mini-footer">
+  <div class="mdl-mini-footer__left-section">
+    <div class="mdl-logo">TheTransitClock Organization</div>
+    <ul class="mdl-mini-footer__link-list">
+      <li><a href="#">Help</a></li>
+      <li><a href="#">Privacy & Terms</a></li>
+    </ul>
+  </div>
+</footer>
+
+</div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/material-design-lite/1.3.0/material.min.js"></script>
+
 
 </body>
 </html>

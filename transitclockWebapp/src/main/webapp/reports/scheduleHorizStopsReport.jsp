@@ -110,6 +110,38 @@ if (agencyId == null || agencyId.isEmpty()) {
 <title>Schedule Report</title>
 </head>
 <body>
-<%@include file="/template/header.jsp" %>
-<div id="title"></div>
+  <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header"> 
+ 
+    <%@include file="/template/header.jsp" %>
+ 
+ <main class="mdl-layout__content">
+	<div class="page-content">
+
+<div class="mdl-grid">
+  <div class="mdl-cell mdl-cell--3-col"></div>
+  <div class="mdl-cell mdl-cell--6-col">
+
+<div id="title" class="mdl-layout-title"></div>
+
+			</div>
+			<div class="mdl-cell mdl-cell--3-col"></div>
+		</div>
+		</div>
+	</main>
+
+<footer class="mdl-mini-footer">
+  <div class="mdl-mini-footer__left-section">
+    <div class="mdl-logo">TheTransitClock Organization</div>
+    <ul class="mdl-mini-footer__link-list">
+      <li><a href="#">Help</a></li>
+      <li><a href="#">Privacy & Terms</a></li>
+    </ul>
+  </div>
+</footer>
+
+</div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/material-design-lite/1.3.0/material.min.js"></script>
+
 </body>

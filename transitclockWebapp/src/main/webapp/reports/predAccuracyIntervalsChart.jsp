@@ -68,9 +68,9 @@ if ((beginTime != null && !beginTime.isEmpty()) || (endTime != null && !endTime.
 		#errorMessage {
           display: none;
           position: fixed;
-	      top: 30px;
-	      margin-left: 20%;
-	      margin-right: 20%;
+	      top: 100px;
+	      /* margin-left: 20%;
+	      margin-right: 20%; */
 	      height: 100%;
 	      text-align: center;
 	      font-family: sans-serif;
@@ -81,7 +81,17 @@ if ((beginTime != null && !beginTime.isEmpty()) || (endTime != null && !endTime.
  </head>
  
   <body>
+  
+  <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header"> 
+ 
     <%@include file="/template/header.jsp" %>
+ 
+ <main class="mdl-layout__content">
+	<div class="page-content">
+
+<div class="mdl-grid">
+  <div class="mdl-cell mdl-cell--3-col"></div>
+  <div class="mdl-cell mdl-cell--6-col">
     
     <!--  There seems to be a bug with a chart_lines chart where it
           doesn't properly handle a height specified as a percentage.
@@ -89,6 +99,28 @@ if ((beginTime != null && !beginTime.isEmpty()) || (endTime != null && !endTime.
     <div id="chart_lines" style="width: 100%; height: 700px;"></div>
     <div id="loading"></div>
     <div id="errorMessage"></div>
+
+			</div>
+			<div class="mdl-cell mdl-cell--3-col"></div>
+		</div>
+		</div>
+	</main>
+
+<footer class="mdl-mini-footer">
+  <div class="mdl-mini-footer__left-section">
+    <div class="mdl-logo">TheTransitClock Organization</div>
+    <ul class="mdl-mini-footer__link-list">
+      <li><a href="#">Help</a></li>
+      <li><a href="#">Privacy & Terms</a></li>
+    </ul>
+  </div>
+</footer>
+
+</div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/material-design-lite/1.3.0/material.min.js"></script>
+
   </body>
 
     <!-- Needed for Google Chart -->
