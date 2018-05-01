@@ -118,14 +118,12 @@ if (agencyId == null || agencyId.isEmpty()) {
 	<div class="page-content">
 
 <div class="mdl-grid">
-  <div class="mdl-cell mdl-cell--3-col"></div>
-  <div class="mdl-cell mdl-cell--6-col">
+  <div class="mdl-cell mdl-cell--12-col">
 
 <div id="title" class="mdl-layout-title"></div>
 <div id="report"></div>
 
 			</div>
-			<div class="mdl-cell mdl-cell--3-col"></div>
 		</div>
 		</div>
 	</main>
