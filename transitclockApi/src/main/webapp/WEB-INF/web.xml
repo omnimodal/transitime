@@ -9,7 +9,7 @@
 		<param-name>transitime_config_file_location</param-name>
 		<!-- Set to customized properties file with db config info and such -->
 		
-		<param-value>/usr/local/transitclock/config/transitclockConfig.xml</param-value>  
+		<param-value>${transitclock.configFiles}</param-value>  
 					
 	</context-param>
 
@@ -37,7 +37,7 @@
 	    <url-pattern>/*</url-pattern>
 	  </filter-mapping> 
 
-  <security-constraint>
+<!--   <security-constraint>
     <web-resource-collection>
       <url-pattern>/*</url-pattern>
     </web-resource-collection>
@@ -54,6 +54,6 @@
     <auth-method>BASIC</auth-method>
     <realm-name>The Transit Clock Realm</realm-name>
   </login-config>
-
+ -->
 </web-app>
 

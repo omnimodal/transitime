@@ -14,7 +14,7 @@ export JAVA_OPTS="$JAVA_OPTS -Dtransitclock.apikey=$(/get_api_key.sh)"
 echo JAVA_OPTS $JAVA_OPTS
 
 # similar thing for tomcat credentials
-export CATALINA_OPTS="$CATALINA_OPTS -Dwebapp.user=$WEBAPP_USER -Dwebapp.password=$WEBAPP_PASSWORD"
+export CATALINA_OPTS="$CATALINA_OPTS -Dwebapp.user=$WEBAPP_USER -Dwebapp.password=$WEBAPP_PASSWORD -Dtransitclock.configFiles=$TRANSITCLOCK_CONFIG"
 
 /usr/local/tomcat/bin/startup.sh
 
@@ -38,7 +38,8 @@ nohup java -Xss12m \
 	-Dtransitclock.monitoring.avlFeedEmailRecipients=$EMAIL_RECIPIENTS \
 	-Dtransitclock.monitoring.emailRecipients=$EMAIL_RECIPIENTS \
 	-Dtransitclock.schedBasedPreds.pollingRateMsec=$SCHED_BASED_PREDS_POLLING_RATE_MSEC \
-	-Dtransitclock.configFiles=/usr/local/transitclock/config/transitclockConfig.xml \
+	-Dtransitclock.api.gtfsRtCacheSeconds=$GTFS_RT_CACHE_SECONDS \
+	-Dtransitclock.configFiles=$TRANSITCLOCK_CONFIG \
 	-jar /usr/local/transitclock/Core.jar \
 	-configRev 0 > /usr/local/transitclock/logs/output.txt &
 
