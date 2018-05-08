@@ -423,6 +423,13 @@
 		<appender-ref ref="GTFS_REALTIME" />
 	</logger>	
 
+	<logger name="org.transitclock.api.gtfsRealtime.GtfsRtVehicleFeed" level="info" additivity="true">
+		<appender-ref ref="GTFS_REALTIME" />
+	</logger>
+
+	<logger name="org.transitclock.api.gtfsRealtime.GtfsRtTripFeed" level="info" additivity="true">
+		<appender-ref ref="GTFS_REALTIME" />
+	</logger>
 
 	<root level="info">
 		<appender-ref ref="CORE" />

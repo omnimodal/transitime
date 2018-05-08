@@ -14,7 +14,17 @@ export JAVA_OPTS="$JAVA_OPTS -Dtransitclock.apikey=$(/get_api_key.sh)"
 echo JAVA_OPTS $JAVA_OPTS
 
 # similar thing for tomcat credentials
-export CATALINA_OPTS="$CATALINA_OPTS -Dwebapp.user=$WEBAPP_USER -Dwebapp.password=$WEBAPP_PASSWORD -Dtransitclock.configFiles=$TRANSITCLOCK_CONFIG"
+# TODO: share these between catalina and java?
+export CATALINA_OPTS="$CATALINA_OPTS \
+-Dtransitclock.environmentName=$ENVIRONMENT_NAME \
+-Duser.timezone=$TIMEZONE \
+-Dtransitclock.core.timezone=$TIMEZONE \
+-Dlogback.timezone=$TIMEZONE \
+-Dwebapp.user=$WEBAPP_USER \
+-Dwebapp.password=$WEBAPP_PASSWORD \
+-Dlogback.configurationFile=/usr/local/transitclock/config/logback.$ENVIRONMENT_NAME.xml \
+-Dtransitclock.logging.dir=/usr/local/transitclock/logs/ \
+-Dtransitclock.configFiles=$TRANSITCLOCK_CONFIG"
 
 /usr/local/tomcat/bin/startup.sh
 
