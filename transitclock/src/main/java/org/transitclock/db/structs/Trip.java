@@ -409,9 +409,9 @@ public class Trip implements Lifecycle, Serializable {
 			
 			// Determine the begin and end time. Assumes that times are added in order
 			if (startTime == null || 
-					(scheduleTime.getDepartureTime() != null && 
-					 scheduleTime.getDepartureTime() < startTime))
-				startTime = scheduleTime.getDepartureTime();
+					(scheduleTime.getArrivalTime() != null && 
+					 scheduleTime.getArrivalTime() < startTime))
+				startTime = scheduleTime.getArrivalTime();
 			if (endTime == null || 
 					(scheduleTime.getArrivalTime() != null &&  
 					 scheduleTime.getArrivalTime() > endTime))
@@ -795,12 +795,11 @@ public class Trip implements Lifecycle, Serializable {
 	/********************** Getter Methods **************************/
 	
 	/**
-	 * Returns departure time of first stop of trip. Gtfs requires departure
-	 * time of first stop of trip and arrival time of last stop of trip to be
-	 * set, even for unscheduled blocks. That way they can determine running
-	 * time of trip.
+	 * Returns arrival time of first stop of trip. Gtfs requires arrival and
+	 * departure time of first and last stop of trip to be set, even for 
+	 * unscheduled blocks. That way they can determine running time of trip.
 	 * 
-	 * @return departure time of first stop of trip. Time is seconds into the
+	 * @return arrival time of first stop of trip. Time is seconds into the
 	 *         day. Can be null.
 	 */
 	public Integer getStartTime() {
@@ -808,10 +807,9 @@ public class Trip implements Lifecycle, Serializable {
 	}
 	
 	/**
-	 * Returns arrival time of last stop of trip. Gtfs requires departure time
-	 * of first stop of trip and arrival time of last stop of trip to be set,
-	 * even for unscheduled blocks. That way they can determine running time of
-	 * trip.
+	 * Returns arrival time of last stop of trip. Gtfs requires arrival and 
+	 * departure time of first and last stop of trip to be set, even for 
+	 * unscheduled blocks. That way they can determine running time of trip.
 	 * 
 	 * @return arrival time of last stop of trip. Time is seconds into the day.
 	 *         Can be null.
