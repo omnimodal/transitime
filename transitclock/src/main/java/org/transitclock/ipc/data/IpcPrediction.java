@@ -172,7 +172,7 @@ public class IpcPrediction implements Serializable {
 	 * because only used internally by the proxy class.
 	 */
 	private IpcPrediction(String vehicleId, String routeId, String stopId,
-			int gtfsStopSeq, String tripId, String tripPatternId,
+			int gtfsStopSeq, Trip trip, String tripId, String tripPatternId,
 			String blockId, long predictionTime, long actualPredictionTime,
 			boolean atEndOfTrip, boolean schedBasedPred, long avlTime,
 			long creationTime, long tripStartEpochTime,
@@ -185,8 +185,7 @@ public class IpcPrediction implements Serializable {
 		this.routeId = routeId;
 		this.stopId = stopId;
 		this.gtfsStopSeq = gtfsStopSeq;
-		// trip is only for client side
-		this.trip = null;
+		this.trip = trip;
 		this.tripId = tripId;
 		this.tripPatternId = tripPatternId;
 		this.blockId = blockId;
@@ -224,6 +223,7 @@ public class IpcPrediction implements Serializable {
 		private String routeId;
 		private String stopId;
 		private int gtfsStopSeq;
+		private Trip trip;
 		private String tripId;
 		private String tripPatternId;
 		private String blockId;
@@ -258,6 +258,7 @@ public class IpcPrediction implements Serializable {
 			this.routeId = p.routeId;
 			this.stopId = p.stopId;
 			this.gtfsStopSeq = p.gtfsStopSeq;
+			this.trip = p.trip;
 			this.tripId = p.tripId;
 			this.tripPatternId = p.tripPatternId;
 			this.blockId = p.blockId;
@@ -297,6 +298,7 @@ public class IpcPrediction implements Serializable {
 			stream.writeObject(routeId);
 			stream.writeObject(stopId);
 			stream.writeInt(gtfsStopSeq);
+			stream.writeObject(trip);
 			stream.writeObject(tripId);
 			stream.writeObject(tripPatternId);
 			stream.writeObject(blockId);
@@ -342,6 +344,7 @@ public class IpcPrediction implements Serializable {
 			routeId = (String) stream.readObject();
 			stopId = (String) stream.readObject();
 			gtfsStopSeq = stream.readInt();
+			trip = (Trip) stream.readObject();
 			tripId = (String) stream.readObject();
 			tripPatternId = (String) stream.readObject();
 			blockId = (String) stream.readObject();
@@ -373,7 +376,7 @@ public class IpcPrediction implements Serializable {
 		 * object is converted to an enclosing class object.
 		 */
 		private Object readResolve() {
-			return new IpcPrediction(vehicleId, routeId, stopId, gtfsStopSeq,
+			return new IpcPrediction(vehicleId, routeId, stopId, gtfsStopSeq, trip,
 					tripId, tripPatternId, blockId, predictionTime, 0,
 					atEndOfTrip, schedBasedPred, avlTime, creationTime,
 					tripStartEpochTime, affectedByWaitStop, driverId,

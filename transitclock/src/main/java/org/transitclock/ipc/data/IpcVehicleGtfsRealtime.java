@@ -28,6 +28,7 @@ import org.transitclock.core.TemporalMatch;
 import org.transitclock.core.VehicleState;
 import org.transitclock.db.structs.HoldingTime;
 import org.transitclock.db.structs.StopPath;
+import org.transitclock.db.structs.Trip;
 import org.transitclock.utils.Time;
 
 
@@ -55,6 +56,9 @@ public class IpcVehicleGtfsRealtime extends IpcVehicle {
 	
 	// For GTFS-rt to disambiguate trips
 	private final long tripStartEpochTime; 
+
+	// Store trip on server side so that can determine schedule relationship
+	private final Trip trip;
 
 	private static final long serialVersionUID = -6611046660260490100L;
 
@@ -90,11 +94,13 @@ public class IpcVehicleGtfsRealtime extends IpcVehicle {
 			this.tripStartEpochTime =
 					Core.getInstance().getTime()
 							.getEpochTime(time, currentTime);
+			trip = vs.getTrip();
 		} else {
 			atStop = false;
 			atOrNextStopId = null;
 			atOrNextGtfsStopSeq = null;
 			tripStartEpochTime = 0;
+			trip = null;
 		}
 	}
 
@@ -108,6 +114,7 @@ public class IpcVehicleGtfsRealtime extends IpcVehicle {
 	 * @param routeId
 	 * @param routeShortName
 	 * @param routeName
+	 * @param trip
 	 * @param tripId
 	 * @param tripStartDateStr
 	 * @param tripPatternId
@@ -130,7 +137,7 @@ public class IpcVehicleGtfsRealtime extends IpcVehicle {
 	protected IpcVehicleGtfsRealtime(String blockId,
 			BlockAssignmentMethod blockAssignmentMethod, IpcAvl avl,
 			float pathHeading, String routeId, String routeShortName,
-			String routeName, String tripId, String tripPatternId,
+			String routeName, Trip trip, String tripId, String tripPatternId,
 			String directionId, String headsign, boolean predictable,
 			boolean schedBasedPred, TemporalDifference realTimeSchdAdh,
 			boolean isDelayed, boolean isLayover, long layoverDepartureTime,
@@ -151,6 +158,7 @@ public class IpcVehicleGtfsRealtime extends IpcVehicle {
 		this.atOrNextStopId = atOrNextStopId;
 		this.atOrNextGtfsStopSeq = atOrNextGtfsStopSeq;
 		this.tripStartEpochTime = tripStartEpochTime;
+		this.trip = trip;
 	}
 	
 	/*
@@ -163,6 +171,7 @@ public class IpcVehicleGtfsRealtime extends IpcVehicle {
 		protected String atOrNextStopId; 
 		protected Integer atOrNextGtfsStopSeq;
 		protected long tripStartEpochTime; 
+		protected Trip trip;
 		
 		private static final short currentSerializationVersion = 0;
 		private static final long serialVersionUID = 5804716921925188073L;
@@ -173,6 +182,7 @@ public class IpcVehicleGtfsRealtime extends IpcVehicle {
 			this.atOrNextStopId = v.atOrNextStopId;
 			this.atOrNextGtfsStopSeq = v.atOrNextGtfsStopSeq;
 			this.tripStartEpochTime = v.tripStartEpochTime;
+			this.trip = v.trip;
 		}
 		
 		/*
@@ -193,6 +203,7 @@ public class IpcVehicleGtfsRealtime extends IpcVehicle {
 			stream.writeObject(atOrNextStopId);
 			stream.writeObject(atOrNextGtfsStopSeq);
 		    stream.writeLong(tripStartEpochTime);
+		    stream.writeObject(trip);
 		}
 
 		/*
@@ -219,6 +230,7 @@ public class IpcVehicleGtfsRealtime extends IpcVehicle {
 			atOrNextStopId = (String) stream.readObject();
 			atOrNextGtfsStopSeq = (Integer) stream.readObject();
 			tripStartEpochTime = stream.readLong();
+			trip = (Trip) stream.readObject();
 		}
 		
 		/*
@@ -229,7 +241,7 @@ public class IpcVehicleGtfsRealtime extends IpcVehicle {
 		 */
 		private Object readResolve() {
 			return new IpcVehicleGtfsRealtime(blockId, blockAssignmentMethod,
-					avl, heading, routeId, routeShortName, routeName, tripId,
+					avl, heading, routeId, routeShortName, routeName, trip, tripId,
 					tripPatternId, directionId, headsign, predictable,
 					schedBasedPred, realTimeSchdAdh, isDelayed, isLayover,
 					layoverDepartureTime, nextStopId, nextStopName,
@@ -243,6 +255,10 @@ public class IpcVehicleGtfsRealtime extends IpcVehicle {
 	
 	public long getTripStartEpochTime() {
 		return tripStartEpochTime;
+	}
+	
+	public Trip getTrip() {
+		return trip;
 	}
 	
 	/**

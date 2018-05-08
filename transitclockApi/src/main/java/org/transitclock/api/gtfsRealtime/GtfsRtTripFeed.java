@@ -21,6 +21,7 @@ import java.rmi.RemoteException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -31,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import org.transitclock.api.utils.AgencyTimezoneCache;
 import org.transitclock.config.IntegerConfigValue;
 import org.transitclock.core.holdingmethod.PredictionTimeComparator;
+import org.transitclock.db.structs.Trip;
 import org.transitclock.ipc.clients.PredictionsInterfaceFactory;
 import org.transitclock.ipc.data.IpcPrediction;
 import org.transitclock.ipc.data.IpcPredictionsForRouteStopDest;
@@ -43,7 +45,6 @@ import com.google.transit.realtime.GtfsRealtime.FeedMessage;
 import com.google.transit.realtime.GtfsRealtime.TripDescriptor;
 import com.google.transit.realtime.GtfsRealtime.TripUpdate;
 import com.google.transit.realtime.GtfsRealtime.TripUpdate.StopTimeEvent;
-import com.google.transit.realtime.GtfsRealtime.TripUpdate.StopTimeUpdate.ScheduleRelationship;
 import com.google.transit.realtime.GtfsRealtime.VehicleDescriptor;
 import com.google.transit.realtime.GtfsRealtime.FeedHeader.Incrementality;
 import com.google.transit.realtime.GtfsRealtime.TripUpdate.StopTimeUpdate;
@@ -141,6 +142,18 @@ public class GtfsRtTripFeed {
 					gtfsRealtimeDateFormatter.format(new Date(
 							tripStartEpochTime));
 			tripDescriptor.setStartDate(tripStartDateStr);
+			
+			// Set the relation between this trip and the static schedule. ADDED and CANCELED not supported. 
+			Trip trip = firstPred.getTrip();
+			if (trip != null && trip.isNoSchedule() && !trip.isExactTimesHeadway()) {
+				// A trip that is running with no schedule associated to it - 
+				// this value is used to identify trips defined in GTFS frequencies.txt with exact_times = 0
+				tripDescriptor.setScheduleRelationship(TripDescriptor.ScheduleRelationship.UNSCHEDULED);
+			} else {
+				// Trip that is running in accordance with its GTFS schedule, 
+				// or is close enough to the scheduled trip to be associated with it.
+				tripDescriptor.setScheduleRelationship(TripDescriptor.ScheduleRelationship.SCHEDULED);
+			}
 		}
 		tripUpdate.setTrip(tripDescriptor);
 		if (firstPred.getDelay() != null)
@@ -183,11 +196,12 @@ public class GtfsRtTripFeed {
 			else
 				stopTimeUpdate.setDeparture(stopTimeEvent);
 			
-
-			if(pred.isSchedBasedPred())
-				stopTimeUpdate.setScheduleRelationship(ScheduleRelationship.SCHEDULED);
-			else
-				stopTimeUpdate.setScheduleRelationship(ScheduleRelationship.NO_DATA);
+			// Set the relation between this StopTime and the static schedule.
+			// Possible values are SCHEDULED, SKIPPED and NO_DATA. Since we are
+			// only creating StopTimeUpdate messages based on the predictions we
+			// have, and based on the static GTFS schedule, the relationship will
+			// always be SCHEDULED.
+			stopTimeUpdate.setScheduleRelationship(StopTimeUpdate.ScheduleRelationship.SCHEDULED);
 			
 
 			tripUpdate.addStopTimeUpdate(stopTimeUpdate);
@@ -311,7 +325,7 @@ public class GtfsRtTripFeed {
 			for (IpcPrediction prediction : 
 					predictionsForStop.getPredictionsForRouteStop()) {
 				String tripId = prediction.getTripId();
-				List<IpcPrediction> predsForTrip = predictionsByTrip.get(tripId);
+				List<IpcPrediction> predsForTrip = predictionsByTrip.get(tripId);			
 				if (predsForTrip == null) {
 					// A new trip so need to use a new trip list
 					predsForTrip = new ArrayList<IpcPrediction>();
@@ -320,6 +334,10 @@ public class GtfsRtTripFeed {
 				
 				predsForTrip.add(prediction);
 			}
+		}
+		// Sort the predictions by stop sequence
+		for (List<IpcPrediction> predsForTrip : predictionsByTrip.values()) {
+			predsForTrip.sort(Comparator.comparingInt(IpcPrediction::getGtfsStopSeq));
 		}
 		
 		// Return results

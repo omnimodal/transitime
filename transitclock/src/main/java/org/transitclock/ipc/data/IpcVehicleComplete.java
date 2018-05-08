@@ -108,6 +108,7 @@ public class IpcVehicleComplete extends IpcVehicleGtfsRealtime {
 	 * @param routeId
 	 * @param routeShortName
 	 * @param routeName
+	 * @param trip
 	 * @param tripId
 	 * @param tripPatternId
 	 * @param directionId
@@ -133,7 +134,7 @@ public class IpcVehicleComplete extends IpcVehicleGtfsRealtime {
 	private IpcVehicleComplete(String blockId,
 			BlockAssignmentMethod blockAssignmentMethod, IpcAvl avl,
 			float pathHeading, String routeId, String routeShortName,
-			String routeName, String tripId, String tripPatternId,
+			String routeName, Trip trip, String tripId, String tripPatternId,
 			String directionId, String headsign, boolean predictable,
 			boolean schedBasedPred, TemporalDifference realTimeSchdAdh,
 			boolean isDelayed, boolean isLayover, long layoverDepartureTime,
@@ -145,7 +146,7 @@ public class IpcVehicleComplete extends IpcVehicleGtfsRealtime {
 			double distanceOfNextStopFromTripStart, double distanceAlongTrip, long freqStartTime, IpcHoldingTime holdingTime, double predictedLatitude, double predictedLongitude) {
 
 		super(blockId, blockAssignmentMethod, avl, pathHeading, routeId,
-				routeShortName, routeName, tripId, tripPatternId, directionId, headsign,
+				routeShortName, routeName, trip, tripId, tripPatternId, directionId, headsign,
 				predictable, schedBasedPred, realTimeSchdAdh, isDelayed,
 				isLayover, layoverDepartureTime, nextStopId, nextStopName,
 				vehicleType, tripStartEpochTime, atStop, atOrNextStopId,
@@ -241,7 +242,7 @@ public class IpcVehicleComplete extends IpcVehicleGtfsRealtime {
 		 */
 		private Object readResolve() {
 			return new IpcVehicleComplete(blockId, blockAssignmentMethod, avl,
-					heading, routeId, routeShortName, routeName, tripId,
+					heading, routeId, routeShortName, routeName, trip, tripId,
 					tripPatternId, directionId, headsign, predictable,
 					schedBasedPred, realTimeSchdAdh, isDelayed, isLayover,
 					layoverDepartureTime, nextStopId, nextStopName,
