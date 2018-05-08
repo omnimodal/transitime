@@ -340,6 +340,19 @@
 		</encoder>
 	</appender>
 
+	<!-- Separate file for GTFS Realtime API logging -->
+	<appender name="GTFS_REALTIME"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${LOG_FILE_ROOT}/gtfsRealtime.log.gz
+			</fileNamePattern>
+		</rollingPolicy>
+		<encoder>
+			<charset>UTF-8</charset>
+			<pattern>${DEFAULT_PATTERN}</pattern>
+		</encoder>
+	</appender>
+
 	<!-- In case easiest to write logs to console. -->
 	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
 		<encoder>
@@ -513,6 +526,14 @@
 	<logger name="org.transitclock.core.ArrivalDepartureGeneratorDefaultImpl" 
 		level="debug" additivity="true"> 
 		<appender-ref ref="ARRIVAL_DEPARTURE" /> 
+	</logger>
+
+	<logger name="org.transitclock.api.gtfsRealtime.GtfsRtVehicleFeed" level="debug" additivity="true">
+		<appender-ref ref="GTFS_REALTIME" />
+	</logger>
+
+	<logger name="org.transitclock.api.gtfsRealtime.GtfsRtTripFeed" level="debug" additivity="true">
+		<appender-ref ref="GTFS_REALTIME" />
 	</logger>
 
 	<!-- In order to log the hibernate SQL queries need to set org.hibernate.SQL 
