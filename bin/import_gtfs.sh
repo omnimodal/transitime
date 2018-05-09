@@ -19,7 +19,7 @@ java -Xmx1024M \
 	-Dtransitclock.core.agencyId=$AGENCYID \
 	-Dtransitclock.configFiles=$TRANSITCLOCK_CONFIG \
 	-Dtransitclock.logging.dir=/usr/local/transitclock/logs/ \
-	-Dlogback.configurationFile=/usr/local/transitclock/config/logback.$ENVIRONMENT_NAME.xml \
+	-Dlogback.configurationFile=/usr/local/transitclock/config/logbackGtfs.xml \
 	-jar /usr/local/transitclock/GtfsFileProcessor.jar \
 	-gtfsUrl $GTFS_URL \
 	-maxTravelTimeSegmentLength 400 \
