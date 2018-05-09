@@ -50,7 +50,6 @@ nohup java -Xss12m \
 	-Dtransitclock.schedBasedPreds.pollingRateMsec=$SCHED_BASED_PREDS_POLLING_RATE_MSEC \
 	-Dtransitclock.api.gtfsRtCacheSeconds=$GTFS_RT_CACHE_SECONDS \
 	-Dtransitclock.configFiles=$TRANSITCLOCK_CONFIG \
-	-jar /usr/local/transitclock/Core.jar \
-	-configRev 0 > /usr/local/transitclock/logs/output.txt &
+	-jar /usr/local/transitclock/Core.jar > /usr/local/transitclock/logs/output.txt &
 
 tail -f /dev/null

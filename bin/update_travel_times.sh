@@ -1,9 +1,16 @@
 #!/usr/bin/env bash
-echo 'THETRANSITCLOCK DOCKER: Import GTFS file.'
+echo 'THETRANSITCLOCK DOCKER: Update Travel Times.'
+
+# MM-DD-YYYY
+# One argument specifies both the start date and end date. If an additional
+# argument is specified it is used as the end date. Otherwise the data is
+# processed for just a single day.
+cmd="$@"
 
 /set_config.sh
 
 java -Xmx1024M \
+	-Dtransitclock.environmentName=development \
 	-Duser.timezone=$TIMEZONE \
 	-Dtransitclock.core.timezone=$TIMEZONE \
 	-Dlogback.timezone=$TIMEZONE \
@@ -20,14 +27,4 @@ java -Xmx1024M \
 	-Dtransitclock.configFiles=$TRANSITCLOCK_CONFIG \
 	-Dtransitclock.logging.dir=/usr/local/transitclock/logs/ \
 	-Dlogback.configurationFile=/usr/local/transitclock/config/logback.$ENVIRONMENT_NAME.xml \
-	-jar /usr/local/transitclock/GtfsFileProcessor.jar \
-	-gtfsUrl $GTFS_URL \
-	-maxTravelTimeSegmentLength 400 \
-	-storeNewRevs
-
-psql \
-	-h $POSTGRES_PORT_5432_TCP_ADDR \
-	-p $POSTGRES_PORT_5432_TCP_PORT \
-	-U $POSTGRES_USER \
-	-d $POSTGRES_DB \
-	-c "update activerevisions set configrev=0 where configrev = -1; update activerevisions set traveltimesrev=0 where traveltimesrev = -1;"
+	-jar /usr/local/transitclock/UpdateTravelTimes.jar $cmd

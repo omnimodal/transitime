@@ -244,6 +244,18 @@
 		<appender-ref ref="EMERGENCY_FILE" />
 	</appender>
 
+	<!-- Separate file for UpdateTravelTimes logging -->
+	<appender name="UPDATE_TRAVEL_TIMES" class="com.j256.cloudwatchlogbackappender.CloudWatchAppender">
+		<region>${logback.cloudWatch.region}</region>
+		<logGroup>${logback.cloudWatch.logGroup}</logGroup>
+		<logStream>UpdateTravelTimes</logStream>
+		<layout>
+			<pattern>${DEFAULT_PATTERN}</pattern>
+		</layout>
+
+		<appender-ref ref="EMERGENCY_FILE" />
+	</appender>
+
 	<!-- In case easiest to write logs to console. -->
 	<appender name="STDOUT" class="com.j256.cloudwatchlogbackappender.CloudWatchAppender">
 		<region>${logback.cloudWatch.region}</region>
@@ -358,9 +370,9 @@
 		level="info" additivity="false">
 		<appender-ref ref="HOLDING" />
 	</logger>
- 	<logger name="org.transitclock.core.TemporalMatcher" level="info" additivity="true"> 
+ 	<logger name="org.transitclock.core.TemporalMatcher" level="info" additivity="false"> 
 		<appender-ref ref="MATCHER" /> </logger> 
-	<logger name="org.transitclock.core.SpatialMatcher" level="info" additivity="true"> 
+	<logger name="org.transitclock.core.SpatialMatcher" level="info" additivity="false"> 
 		<appender-ref ref="MATCHER" /> </logger>
 	<logger name="org.transitclock.config" level="info" additivity="false">
 		<appender-ref ref="CONFIG" />
@@ -414,7 +426,7 @@
 	</logger>
 	
 	<logger name="org.transitclock.core.ArrivalDepartureGeneratorDefaultImpl" 
-		level="info" additivity="true"> 
+		level="info" additivity="false"> 
 		<appender-ref ref="ARRIVAL_DEPARTURE" /> 
 	</logger>
 
@@ -423,13 +435,34 @@
 		<appender-ref ref="GTFS_REALTIME" />
 	</logger>	
 
-	<logger name="org.transitclock.api.gtfsRealtime.GtfsRtVehicleFeed" level="info" additivity="true">
+	<logger name="org.transitclock.api.gtfsRealtime.GtfsRtVehicleFeed" level="info" additivity="false">
 		<appender-ref ref="GTFS_REALTIME" />
 	</logger>
 
-	<logger name="org.transitclock.api.gtfsRealtime.GtfsRtTripFeed" level="info" additivity="true">
+	<logger name="org.transitclock.api.gtfsRealtime.GtfsRtTripFeed" level="info" additivity="false">
 		<appender-ref ref="GTFS_REALTIME" />
 	</logger>
+
+	<logger name="org.transitclock.applications.UpdateTravelTimes" 
+		level="info" additivity="false">
+		<appender-ref ref="UPDATE_TRAVEL_TIMES" />
+	</logger>
+
+	<logger name="org.transitclock.core.travelTimes" 
+		level="info" additivity="false">
+		<appender-ref ref="UPDATE_TRAVEL_TIMES" />
+	</logger>
+
+	<logger name="org.transitclock.core.travelTimes.TravelTimesProcessor" 
+		level="info" additivity="false">
+		<appender-ref ref="UPDATE_TRAVEL_TIMES" />
+	</logger>
+
+	<logger name="org.transitclock.db.hibernate.HibernateUtils" 
+		level="info" additivity="false">
+		<appender-ref ref="UPDATE_TRAVEL_TIMES" />
+	</logger>
+
 
 	<root level="info">
 		<appender-ref ref="CORE" />

@@ -353,6 +353,22 @@
 		</encoder>
 	</appender>
 
+
+	<!-- Separate file for UpdateTravelTimes logging -->
+	<appender name="UPDATE_TRAVEL_TIMES"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${LOG_FILE_ROOT}/updateTravelTimes.log.gz
+			</fileNamePattern>
+		</rollingPolicy>
+
+		<encoder>
+			<charset>UTF-8</charset>
+			<pattern>${DEFAULT_PATTERN}</pattern> 
+		</encoder>
+	</appender>
+
+
 	<!-- In case easiest to write logs to console. -->
 	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
 		<encoder>
@@ -461,9 +477,9 @@
 		level="debug" additivity="false">
 		<appender-ref ref="HOLDING" />
 	</logger>
- 	<logger name="org.transitclock.core.TemporalMatcher" level="info" additivity="true"> 
+ 	<logger name="org.transitclock.core.TemporalMatcher" level="info" additivity="false"> 
 		<appender-ref ref="MATCHER" /> </logger> 
-	<logger name="org.transitclock.core.SpatialMatcher" level="info" additivity="true"> 
+	<logger name="org.transitclock.core.SpatialMatcher" level="info" additivity="false"> 
 		<appender-ref ref="MATCHER" /> </logger>
 	<!-- For config params it is more complicated because want to both have 
 		config params logged in separate file but also want some errors to send out 
@@ -524,17 +540,41 @@
 	</logger>
 		
 	<logger name="org.transitclock.core.ArrivalDepartureGeneratorDefaultImpl" 
-		level="debug" additivity="true"> 
+		level="debug" additivity="false"> 
 		<appender-ref ref="ARRIVAL_DEPARTURE" /> 
 	</logger>
 
-	<logger name="org.transitclock.api.gtfsRealtime.GtfsRtVehicleFeed" level="debug" additivity="true">
+	<logger name="org.transitclock.api.gtfsRealtime.GtfsRtVehicleFeed" level="debug" additivity="false">
 		<appender-ref ref="GTFS_REALTIME" />
 	</logger>
 
-	<logger name="org.transitclock.api.gtfsRealtime.GtfsRtTripFeed" level="debug" additivity="true">
+	<logger name="org.transitclock.api.gtfsRealtime.GtfsRtTripFeed" level="debug" additivity="false">
 		<appender-ref ref="GTFS_REALTIME" />
 	</logger>
+
+
+
+
+	<logger name="org.transitclock.applications.UpdateTravelTimes" 
+		level="info" additivity="false">
+		<appender-ref ref="UPDATE_TRAVEL_TIMES" />
+	</logger>
+
+	<logger name="org.transitclock.core.travelTimes" 
+		level="info" additivity="false">
+		<appender-ref ref="UPDATE_TRAVEL_TIMES" />
+	</logger>
+
+	<logger name="org.transitclock.core.travelTimes.TravelTimesProcessor" 
+		level="info" additivity="false">
+		<appender-ref ref="UPDATE_TRAVEL_TIMES" />
+	</logger>
+
+	<logger name="org.transitclock.db.hibernate.HibernateUtils" 
+		level="info" additivity="false">
+		<appender-ref ref="UPDATE_TRAVEL_TIMES" />
+	</logger>
+
 
 	<!-- In order to log the hibernate SQL queries need to set org.hibernate.SQL 
 		to debug. To show the values of the parameters need to set org.hibernate.type 
