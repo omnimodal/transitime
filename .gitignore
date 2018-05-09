@@ -11,6 +11,7 @@
 /.settings/
 /data/
 /docs/
+/logs/
 
 .env
 .DS_Store
