@@ -409,9 +409,15 @@ public class Trip implements Lifecycle, Serializable {
 			
 			// Determine the begin and end time. Assumes that times are added in order
 			if (startTime == null || 
-					(scheduleTime.getArrivalTime() != null && 
-					 scheduleTime.getArrivalTime() < startTime))
-				startTime = scheduleTime.getArrivalTime();
+					(scheduleTime.getDepartureTime() != null && 
+					 scheduleTime.getDepartureTime() < startTime)) {
+				startTime = scheduleTime.getDepartureTime();
+				// Arrival time may exist if the first stop is a wait stop
+				if (scheduleTime.getArrivalTime() != null && 
+					scheduleTime.getArrivalTime() < startTime) {
+					startTime = scheduleTime.getArrivalTime();
+				}
+			}
 			if (endTime == null || 
 					(scheduleTime.getArrivalTime() != null &&  
 					 scheduleTime.getArrivalTime() > endTime))
