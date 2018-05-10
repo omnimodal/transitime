@@ -20,11 +20,24 @@ export CATALINA_OPTS="$CATALINA_OPTS \
 -Duser.timezone=$TIMEZONE \
 -Dtransitclock.core.timezone=$TIMEZONE \
 -Dlogback.timezone=$TIMEZONE \
+-Dlogback.errorEmail=$EMAIL_RECIPIENTS \
+-Dlogback.smtpHost=$SMTP_HOST \
+-Dlogback.smtpUsername=$SMTP_USERNAME \
+-Dlogback.smtpPassword=$SMTP_PASSWORD \
+-Dlogback.cloudWatch.region=$CLOUDWATCH_REGION \
+-Dlogback.cloudWatch.logGroup=/transitclock/$ENVIRONMENT_NAME/$AGENCYNAME \
+-Dtransitclock.cloudwatch.awsAccessKey=$AWS_ACCESS_KEY_ID \
+-Dtransitclock.cloudwatch.awsSecretKey=$AWS_SECRET_ACCESS_KEY \
+-Dtransitclock.cloudwatch.awsEndpoint=$CLOUDWATCH_MONITORING_ENDPOINT \
+-Dlogback.configurationFile=/usr/local/transitclock/config/logback.$ENVIRONMENT_NAME.xml \
+-Dtransitclock.core.agencyId=$AGENCYID \
+-Dtransitclock.logging.dir=/usr/local/transitclock/logs/ \
+-Dtransitclock.monitoring.avlFeedEmailRecipients=$EMAIL_RECIPIENTS \
+-Dtransitclock.monitoring.emailRecipients=$EMAIL_RECIPIENTS \
+-Dtransitclock.configFiles=$TRANSITCLOCK_CONFIG \
 -Dwebapp.user=$WEBAPP_USER \
 -Dwebapp.password=$WEBAPP_PASSWORD \
--Dlogback.configurationFile=/usr/local/transitclock/config/logback.$ENVIRONMENT_NAME.xml \
--Dtransitclock.logging.dir=/usr/local/transitclock/logs/ \
--Dtransitclock.configFiles=$TRANSITCLOCK_CONFIG"
+-Dtransitclock.api.gtfsRtCacheSeconds=$GTFS_RT_CACHE_SECONDS"
 
 /usr/local/tomcat/bin/startup.sh
 
@@ -48,7 +61,6 @@ nohup java -Xss12m \
 	-Dtransitclock.monitoring.avlFeedEmailRecipients=$EMAIL_RECIPIENTS \
 	-Dtransitclock.monitoring.emailRecipients=$EMAIL_RECIPIENTS \
 	-Dtransitclock.schedBasedPreds.pollingRateMsec=$SCHED_BASED_PREDS_POLLING_RATE_MSEC \
-	-Dtransitclock.api.gtfsRtCacheSeconds=$GTFS_RT_CACHE_SECONDS \
 	-Dtransitclock.configFiles=$TRANSITCLOCK_CONFIG \
 	-jar /usr/local/transitclock/Core.jar > /usr/local/transitclock/logs/output.txt &
 
