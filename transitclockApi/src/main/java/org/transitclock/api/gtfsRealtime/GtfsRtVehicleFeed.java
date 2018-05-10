@@ -107,12 +107,10 @@ public class GtfsRtVehicleFeed {
 			if (trip != null && trip.isNoSchedule() && !trip.isExactTimesHeadway()) {
 				// A trip that is running with no schedule associated to it - 
 				// this value is used to identify trips defined in GTFS frequencies.txt with exact_times = 0
-				logger.info("VehicleFeed set schedule relationship to UNSCHEDULED");
 				tripDescriptor.setScheduleRelationship(ScheduleRelationship.UNSCHEDULED);
 			} else {
 				// Trip that is running in accordance with its GTFS schedule, 
 				// or is close enough to the scheduled trip to be associated with it.
-				logger.info("VehicleFeed set schedule relationship to SCHEDULED");
 				tripDescriptor.setScheduleRelationship(ScheduleRelationship.SCHEDULED);
 			}
 
