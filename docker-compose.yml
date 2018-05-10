@@ -1,4 +1,4 @@
-version: "2"
+version: "2.3"
 services:
   web:
     build: .
@@ -30,3 +30,9 @@ services:
       - AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
       - TRANSITCLOCK_CONFIG=$TRANSITCLOCK_CONFIG
       - GTFS_RT_CACHE_SECONDS=$GTFS_RT_CACHE_SECONDS
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/api/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
