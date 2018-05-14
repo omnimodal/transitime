@@ -304,7 +304,7 @@ public class IpcPrediction implements Serializable {
 			stream.writeInt(gtfsStopSeq);
 			stream.writeObject(tripId);
 			stream.writeObject(tripPatternId);
-			stream.writeObject(isTripUnscheduled);
+			stream.writeBoolean(isTripUnscheduled);
 			stream.writeObject(blockId);
 			stream.writeLong(predictionTime);
 			stream.writeBoolean(atEndOfTrip);
