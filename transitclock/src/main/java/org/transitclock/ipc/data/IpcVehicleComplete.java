@@ -108,9 +108,9 @@ public class IpcVehicleComplete extends IpcVehicleGtfsRealtime {
 	 * @param routeId
 	 * @param routeShortName
 	 * @param routeName
-	 * @param trip
 	 * @param tripId
 	 * @param tripPatternId
+	 * @param isTripUnscheduled
 	 * @param directionId
 	 * @param headsign
 	 * @param predictable
@@ -134,7 +134,7 @@ public class IpcVehicleComplete extends IpcVehicleGtfsRealtime {
 	private IpcVehicleComplete(String blockId,
 			BlockAssignmentMethod blockAssignmentMethod, IpcAvl avl,
 			float pathHeading, String routeId, String routeShortName,
-			String routeName, Trip trip, String tripId, String tripPatternId,
+			String routeName, String tripId, String tripPatternId, boolean isTripUnscheduled,
 			String directionId, String headsign, boolean predictable,
 			boolean schedBasedPred, TemporalDifference realTimeSchdAdh,
 			boolean isDelayed, boolean isLayover, long layoverDepartureTime,
@@ -146,7 +146,7 @@ public class IpcVehicleComplete extends IpcVehicleGtfsRealtime {
 			double distanceOfNextStopFromTripStart, double distanceAlongTrip, long freqStartTime, IpcHoldingTime holdingTime, double predictedLatitude, double predictedLongitude) {
 
 		super(blockId, blockAssignmentMethod, avl, pathHeading, routeId,
-				routeShortName, routeName, trip, tripId, tripPatternId, directionId, headsign,
+				routeShortName, routeName, tripId, tripPatternId, isTripUnscheduled, directionId, headsign,
 				predictable, schedBasedPred, realTimeSchdAdh, isDelayed,
 				isLayover, layoverDepartureTime, nextStopId, nextStopName,
 				vehicleType, tripStartEpochTime, atStop, atOrNextStopId,
@@ -242,8 +242,8 @@ public class IpcVehicleComplete extends IpcVehicleGtfsRealtime {
 		 */
 		private Object readResolve() {
 			return new IpcVehicleComplete(blockId, blockAssignmentMethod, avl,
-					heading, routeId, routeShortName, routeName, trip, tripId,
-					tripPatternId, directionId, headsign, predictable,
+					heading, routeId, routeShortName, routeName, tripId,
+					tripPatternId, isTripUnscheduled, directionId, headsign, predictable,
 					schedBasedPred, realTimeSchdAdh, isDelayed, isLayover,
 					layoverDepartureTime, nextStopId, nextStopName,
 					vehicleType, tripStartEpochTime, atStop, atOrNextStopId,
@@ -305,6 +305,7 @@ public class IpcVehicleComplete extends IpcVehicleGtfsRealtime {
 				+ ", routeName=" + getRouteName() 
 				+ ", tripId=" + getTripId()
 				+ ", tripPatternId=" + getTripPatternId()
+				+ ", isTripUnscheduled=" + isTripUnscheduled()
 				+ ", directionId=" + getDirectionId()
 				+ ", headsign=" + getHeadsign()
 				+ ", predictable=" + isPredictable()

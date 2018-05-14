@@ -52,6 +52,7 @@ public class IpcPrediction implements Serializable {
 	private final int gtfsStopSeq;
 	private final String tripId;
 	private final String tripPatternId;
+	private final boolean isTripUnscheduled;
 	private final String blockId;
 	// The prediction to present to the user. Can be different from
 	// actualPredictionTime in that for wait stops might want to show
@@ -141,6 +142,7 @@ public class IpcPrediction implements Serializable {
 	    this.tripId = trip != null ? trip.getId() : "";
 	    this.tripPatternId = trip != null ? trip.getTripPattern().getId() : "";
 	    this.blockId = trip != null ? trip.getBlockId() : null;
+	    this.isTripUnscheduled = trip != null && trip.isNoSchedule() && !trip.isExactTimesHeadway();
 	    this.predictionTime = predictionTime;
 	    this.actualPredictionTime = actualPredictionTime;
 	    this.atEndOfTrip = atEndOfTrip;
@@ -172,7 +174,7 @@ public class IpcPrediction implements Serializable {
 	 * because only used internally by the proxy class.
 	 */
 	private IpcPrediction(String vehicleId, String routeId, String stopId,
-			int gtfsStopSeq, Trip trip, String tripId, String tripPatternId,
+			int gtfsStopSeq, String tripId, String tripPatternId, boolean isTripUnscheduled,
 			String blockId, long predictionTime, long actualPredictionTime,
 			boolean atEndOfTrip, boolean schedBasedPred, long avlTime,
 			long creationTime, long tripStartEpochTime,
@@ -185,9 +187,11 @@ public class IpcPrediction implements Serializable {
 		this.routeId = routeId;
 		this.stopId = stopId;
 		this.gtfsStopSeq = gtfsStopSeq;
-		this.trip = trip;
+		// trip is only for client side
+		this.trip = null;
 		this.tripId = tripId;
 		this.tripPatternId = tripPatternId;
+		this.isTripUnscheduled = isTripUnscheduled;
 		this.blockId = blockId;
 		this.predictionTime = predictionTime;
 		this.actualPredictionTime = actualPredictionTime;
@@ -223,9 +227,9 @@ public class IpcPrediction implements Serializable {
 		private String routeId;
 		private String stopId;
 		private int gtfsStopSeq;
-		private Trip trip;
 		private String tripId;
 		private String tripPatternId;
+		private boolean isTripUnscheduled;
 		private String blockId;
 		private long predictionTime;
 		private boolean atEndOfTrip;
@@ -258,9 +262,9 @@ public class IpcPrediction implements Serializable {
 			this.routeId = p.routeId;
 			this.stopId = p.stopId;
 			this.gtfsStopSeq = p.gtfsStopSeq;
-			this.trip = p.trip;
 			this.tripId = p.tripId;
 			this.tripPatternId = p.tripPatternId;
+			this.isTripUnscheduled = p.isTripUnscheduled;
 			this.blockId = p.blockId;
 			this.predictionTime = p.predictionTime;
 			this.atEndOfTrip = p.atEndOfTrip;
@@ -298,9 +302,9 @@ public class IpcPrediction implements Serializable {
 			stream.writeObject(routeId);
 			stream.writeObject(stopId);
 			stream.writeInt(gtfsStopSeq);
-			stream.writeObject(trip);
 			stream.writeObject(tripId);
 			stream.writeObject(tripPatternId);
+			stream.writeObject(isTripUnscheduled);
 			stream.writeObject(blockId);
 			stream.writeLong(predictionTime);
 			stream.writeBoolean(atEndOfTrip);
@@ -344,9 +348,9 @@ public class IpcPrediction implements Serializable {
 			routeId = (String) stream.readObject();
 			stopId = (String) stream.readObject();
 			gtfsStopSeq = stream.readInt();
-			trip = (Trip) stream.readObject();
 			tripId = (String) stream.readObject();
 			tripPatternId = (String) stream.readObject();
+			isTripUnscheduled = stream.readBoolean();
 			blockId = (String) stream.readObject();
 			predictionTime = stream.readLong();
 			atEndOfTrip = stream.readBoolean();
@@ -376,8 +380,8 @@ public class IpcPrediction implements Serializable {
 		 * object is converted to an enclosing class object.
 		 */
 		private Object readResolve() {
-			return new IpcPrediction(vehicleId, routeId, stopId, gtfsStopSeq, trip,
-					tripId, tripPatternId, blockId, predictionTime, 0,
+			return new IpcPrediction(vehicleId, routeId, stopId, gtfsStopSeq,
+					tripId, tripPatternId, isTripUnscheduled, blockId, predictionTime, 0,
 					atEndOfTrip, schedBasedPred, avlTime, creationTime,
 					tripStartEpochTime, affectedByWaitStop, driverId,
 					passengerCount, passengerFullness, isDelayed,
@@ -462,6 +466,10 @@ public class IpcPrediction implements Serializable {
 
 	public String getTripPatternId() {
 		return tripPatternId;
+	}
+	
+	public boolean isTripUnscheduled() {
+		return isTripUnscheduled;
 	}
 	
 	public String getBlockId() {

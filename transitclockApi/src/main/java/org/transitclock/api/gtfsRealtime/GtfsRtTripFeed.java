@@ -32,7 +32,6 @@ import org.slf4j.LoggerFactory;
 import org.transitclock.api.utils.AgencyTimezoneCache;
 import org.transitclock.config.IntegerConfigValue;
 import org.transitclock.core.holdingmethod.PredictionTimeComparator;
-import org.transitclock.db.structs.Trip;
 import org.transitclock.ipc.clients.PredictionsInterfaceFactory;
 import org.transitclock.ipc.data.IpcPrediction;
 import org.transitclock.ipc.data.IpcPredictionsForRouteStopDest;
@@ -144,8 +143,7 @@ public class GtfsRtTripFeed {
 			tripDescriptor.setStartDate(tripStartDateStr);
 			
 			// Set the relation between this trip and the static schedule. ADDED and CANCELED not supported. 
-			Trip trip = firstPred.getTrip();
-			if (trip != null && trip.isNoSchedule() && !trip.isExactTimesHeadway()) {
+			if (firstPred.isTripUnscheduled()) {
 				// A trip that is running with no schedule associated to it - 
 				// this value is used to identify trips defined in GTFS frequencies.txt with exact_times = 0
 				tripDescriptor.setScheduleRelationship(TripDescriptor.ScheduleRelationship.UNSCHEDULED);

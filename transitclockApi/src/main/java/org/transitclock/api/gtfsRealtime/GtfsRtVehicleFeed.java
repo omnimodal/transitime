@@ -26,7 +26,6 @@ import java.util.Date;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.transitclock.api.utils.AgencyTimezoneCache;
-import org.transitclock.db.structs.Trip;
 import org.transitclock.ipc.clients.VehiclesInterfaceFactory;
 import org.transitclock.ipc.data.IpcVehicleGtfsRealtime;
 import org.transitclock.ipc.interfaces.VehiclesInterface;
@@ -103,8 +102,7 @@ public class GtfsRtVehicleFeed {
 			}
 
 			// Set the relation between this trip and the static schedule. ADDED and CANCELED not supported.
-			Trip trip = vehicleData.getTrip();
-			if (trip != null && trip.isNoSchedule() && !trip.isExactTimesHeadway()) {
+			if (vehicleData.isTripUnscheduled()) {
 				// A trip that is running with no schedule associated to it - 
 				// this value is used to identify trips defined in GTFS frequencies.txt with exact_times = 0
 				tripDescriptor.setScheduleRelationship(ScheduleRelationship.UNSCHEDULED);
