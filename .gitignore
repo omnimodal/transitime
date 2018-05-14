@@ -12,6 +12,7 @@
 /data/
 /docs/
 /logs/
+/transitclock/logs/
 
 .env
 .DS_Store
