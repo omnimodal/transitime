@@ -477,9 +477,11 @@
 		level="debug" additivity="false">
 		<appender-ref ref="HOLDING" />
 	</logger>
- 	<logger name="org.transitclock.core.TemporalMatcher" level="info" additivity="false"> 
+	<logger name="org.transitclock.core.MatchProcessor" level="debug" additivity="false"> 
+		<appender-ref ref="MATCHER" /> </logger>
+ 	<logger name="org.transitclock.core.TemporalMatcher" level="debug" additivity="false"> 
 		<appender-ref ref="MATCHER" /> </logger> 
-	<logger name="org.transitclock.core.SpatialMatcher" level="info" additivity="false"> 
+	<logger name="org.transitclock.core.SpatialMatcher" level="debug" additivity="false"> 
 		<appender-ref ref="MATCHER" /> </logger>
 	<!-- For config params it is more complicated because want to both have 
 		config params logged in separate file but also want some errors to send out 
@@ -610,8 +612,11 @@
 	<!-- <logger name="org.transitclock.core.TemporalMatcher" level="debug" additivity="true"> 
 		<appender-ref ref="CORE_DEBUG" /> </logger> -->
 
-	<!-- <logger name="org.transitclock.core.ArrivalDepartureGeneratorDefaultImpl" 
-		level="debug" additivity="true"> <appender-ref ref="ARRIVAL_DEPARTURE" /> </logger> -->
+	<!-- <logger name="org.transitclock.core.SpatialMatcher" level="debug" additivity="true"> 
+		<appender-ref ref="CORE_DEBUG" /> </logger> -->
+
+	<logger name="org.transitclock.core.ArrivalDepartureGeneratorDefaultImpl" 
+		level="debug" additivity="true"> <appender-ref ref="ARRIVAL_DEPARTURE" /> </logger>
 
 	<!-- Set default level of root logger to "info" instead of to the the default 
 		of "debug". This way the default is to only see important messages. Debug 

@@ -370,6 +370,8 @@
 		level="info" additivity="false">
 		<appender-ref ref="HOLDING" />
 	</logger>
+	<logger name="org.transitclock.core.MatchProcessor" level="info" additivity="false"> 
+		<appender-ref ref="MATCHER" /> </logger>
  	<logger name="org.transitclock.core.TemporalMatcher" level="info" additivity="false"> 
 		<appender-ref ref="MATCHER" /> </logger> 
 	<logger name="org.transitclock.core.SpatialMatcher" level="info" additivity="false"> 
