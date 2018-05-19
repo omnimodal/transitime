@@ -400,16 +400,16 @@ public class TemporalMatcher {
 							vehicleState.getVehicleId(), 
 							previousAvlTime, 
 							previousMatch, spatialMatch);
-			int expectedTravelTimeMsecBackward = 
-					TravelTimes.getInstance().expectedTravelTimeBetweenMatches(
-							vehicleState.getVehicleId(), 
-							previousAvlTime, 
-							spatialMatch, previousMatch);
-			
-			int expectedTravelTimeMsec = Math.min(expectedTravelTimeMsecForward, expectedTravelTimeMsecBackward);
+//			int expectedTravelTimeMsecBackward = 
+//					TravelTimes.getInstance().expectedTravelTimeBetweenMatches(
+//							vehicleState.getVehicleId(), 
+//							previousAvlTime, 
+//							spatialMatch, previousMatch);
+//			
+//			int expectedTravelTimeMsec = Math.min(expectedTravelTimeMsecForward, expectedTravelTimeMsecBackward);
 			
 		
-			//expectedTravelTimeMsec = expectedTravelTimeMsecForward;
+			int expectedTravelTimeMsec = expectedTravelTimeMsecForward;
 			
 			// If looking at layover match and the match is different from 
 			// the previous one then it means we expect that the vehicle has
