@@ -474,10 +474,10 @@ public class TemporalMatcher {
 			if (differenceFromExpectedTime != null 
 					&& expectedTravelTimeMsec > 2 * Time.MS_PER_MIN 
 					&& !differenceFromExpectedTime.isWithinBounds()) {
-				differenceFromExpectedTime = null;
 				logger.debug("Rejecting temporal match {} because it is not "
 						+ "within the allowable bounds.", 
 						differenceFromExpectedTime);
+				differenceFromExpectedTime = null;
 			}
 					
 			// If this temporal match is better than the previous best one
