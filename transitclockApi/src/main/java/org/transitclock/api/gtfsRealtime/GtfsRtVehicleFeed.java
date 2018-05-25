@@ -229,6 +229,8 @@ public class GtfsRtVehicleFeed {
 	 */
 	public FeedMessage createMessage() {
 		Collection<IpcVehicleGtfsRealtime> vehicles = getVehicles();
+		// Filter out unpredictable vehicles
+		vehicles.removeIf(v -> !v.isPredictable());
 		return createMessage(vehicles);
 	}
 
