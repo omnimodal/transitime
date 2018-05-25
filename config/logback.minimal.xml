@@ -1,0 +1,27 @@
+<configuration scan="true" scanPeriod="30 seconds">
+
+	<property name="DATA_PATTERN"
+		value="%n%d{HH:mm:ss.SSS, ${logback.timezone:-Europe/Dublin}} %msg%n" />
+
+	<property name="LOG_FILE_ROOT"
+		value="${transitclock.logging.dir:-/Logs}/${transitclock.core.agencyId:-DEFAULT}/core/%d{yyyy/MM/dd}" />
+
+	<appender name="CORE"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<!-- daily rollover. Compress the file when rolling it over. -->
+			<fileNamePattern>${LOG_FILE_ROOT}/unified.log.gz</fileNamePattern>
+		</rollingPolicy>
+
+		<encoder>
+			<!-- Info on possible patterns is at http://logback.qos.ch/manual/layouts.html#ClassicPatternLayout -->
+			<charset>UTF-8</charset>
+			<pattern>${DATA_PATTERN}</pattern>
+		</encoder>
+	</appender>
+
+	<root level="warn">
+		<appender-ref ref="CORE" />
+	</root>
+
+</configuration>
