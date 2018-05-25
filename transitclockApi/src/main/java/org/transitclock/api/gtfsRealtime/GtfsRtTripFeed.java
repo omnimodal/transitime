@@ -154,8 +154,12 @@ public class GtfsRtTripFeed {
 			}
 		}
 		tripUpdate.setTrip(tripDescriptor);
-		if (firstPred.getDelay() != null)
-		  tripUpdate.setDelay(firstPred.getDelay()); // set schedule deviation
+		// Don't set TripUpdate.delay for now based on feedback from Google (INVALID_TRIP_UPDATE_DELAY_USAGE warning)
+		// If both TripUpdate.delay and StopTimeUpdate arrival/departure times are specified, this warning will occur,
+		// and they will drop the StopTimeUpdate predictions in favor of TripUpdate.delay. Since StopTimeUpdate predictions
+		// are higher fidelity, we'll favor those for now.
+//		if (firstPred.getDelay() != null)
+//		  tripUpdate.setDelay(firstPred.getDelay()); // set schedule deviation
 
 		// Add the VehicleDescriptor information
 		VehicleDescriptor.Builder vehicleDescriptor =
