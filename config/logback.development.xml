@@ -175,7 +175,7 @@
 		</rollingPolicy>
 		<encoder>
 			<charset>UTF-8</charset>
-			<pattern>${DEFAULT_PATTERN}</pattern>
+			<pattern>${DATA_PATTERN}</pattern>
 		</encoder>
 	</appender>
 
@@ -439,6 +439,12 @@
 		<appender-ref ref="PREDICTION" />
 	</logger>
 
+	<logger
+		name="org.transitclock.core.RealTimeSchedAdhProcessor"
+		level="debug" additivity="false">
+		<appender-ref ref="PREDICTION" />
+	</logger>
+
 	<logger name="org.transitclock.core.schedBasedPreds" level="debug"
 		additivity="false">
 		<appender-ref ref="SCHED_BASED_PREDS" />
@@ -510,7 +516,7 @@
 		<appender-ref ref="MONITORING" />
 	</logger>
 
-	<logger name="org.transitclock.core.autoAssigner" level="info"
+	<logger name="org.transitclock.core.autoAssigner" level="debug"
 		additivity="false">
 		<appender-ref ref="AUTO_ASSIGNER" />
 	</logger>
@@ -603,8 +609,8 @@
 	<!-- <logger name="org.transitclock.gtfs.DbConfig" level="debug" additivity="true"> 
 		<appender-ref ref="CORE_DEBUG" /> </logger> -->
 
-	<!-- <logger name="org.transitclock.core.AvlProcessor" level="debug" additivity="true"> 
-		<appender-ref ref="CORE_DEBUG" /> </logger> -->
+	<logger name="org.transitclock.core.AvlProcessor" level="debug" additivity="true"> 
+		<appender-ref ref="AVL" /> </logger>
 
 	<!-- <logger name="org.transitclock.core.MatchProcessor" level="debug" additivity="true"> 
 		<appender-ref ref="CORE_DEBUG" /> </logger> -->
