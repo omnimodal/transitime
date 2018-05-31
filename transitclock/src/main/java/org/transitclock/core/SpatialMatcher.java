@@ -779,7 +779,10 @@ public class SpatialMatcher {
 		spatialMatcher.setStartOfSearch(previousMatch);			
 		
 		while (!indices.pastEndOfBlock(vehicleState.getAvlReport().getTime()) && 
-				(vehicleState.isLayover() || distanceSearched < distanceAlongPathToSearch) 
+				// TODO: camsys added the isLayover check in https://github.com/camsys/transitime/commit/0dd4c3495047a2d2ce0d1dc8bc655e56b190e5a8
+				// but this can cause a lot of extra spatial matches to be created for trips way in the future, so disabling for now. 
+				// (vehicleState.isLayover() || distanceSearched < distanceAlongPathToSearch) 
+				distanceSearched < distanceAlongPathToSearch
 					&& Math.abs(indices.getStopPathIndex()-previousMatch.getIndices().getStopPathIndex()) <= AvlConfig.getMaxStopPathsAhead()) {
 
 			spatialMatcher.processPossiblePotentialMatch(
