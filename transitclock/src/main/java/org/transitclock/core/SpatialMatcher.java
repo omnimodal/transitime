@@ -591,10 +591,17 @@ public class SpatialMatcher {
 				distanceAlongSegment = 
 						startSearchSpatialMatch.getDistanceAlongSegment();
 
-				previousPotentialSpatialMatch = null;
+				// TODO: returning early here prevents a current match at a layover from being included in the list of possible spatial matches,
+				// causing a match to the layover only for one cycle. Subsequently the best match was either none or the wrong stop, 
+				// depending on settings, which was messing up calculated delay, predictions, and other stuff.
+				// why was the early return added?
 				
-				return;				
+				// previousPotentialSpatialMatch = null;
+				// return;
+
 				// TODO CamSys version had this comment and did not set distance to Segment.
+				// distanceToSegment = 
+				// startSearchSpatialMatch.getDistanceToSegment();				
 				// Do not set distanceToSegment to startSearchSpatialMatch value:
 				// - Need to check that it is in bounds
 				// - Need accurate comparison with next match's distance.
