@@ -36,10 +36,10 @@
         <eventHistoryMaxSize>60</eventHistoryMaxSize>
 
         <!-- 45 minutes -->
-        <allowableEarlySeconds>2700</allowableEarlySeconds>
+        <!-- <allowableEarlySeconds>2700</allowableEarlySeconds> -->
 
         <!-- 15 minutes -->
-        <allowableEarlySecondsForInitialMatching>900</allowableEarlySecondsForInitialMatching>
+        <!-- <allowableEarlySecondsForInitialMatching>900</allowableEarlySecondsForInitialMatching> -->
 
         <!-- disable VehicleEvent eventTypes "Delayed" and "No progress" -->
         <timeForDeterminingNoProgress>0</timeForDeterminingNoProgress>
