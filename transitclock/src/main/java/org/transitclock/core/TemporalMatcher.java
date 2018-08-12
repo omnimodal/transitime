@@ -400,16 +400,17 @@ public class TemporalMatcher {
 							vehicleState.getVehicleId(), 
 							previousAvlTime, 
 							previousMatch, spatialMatch);
-			int expectedTravelTimeMsecBackward = 
-					TravelTimes.getInstance().expectedTravelTimeBetweenMatches(
-							vehicleState.getVehicleId(), 
-							previousAvlTime, 
-							spatialMatch, previousMatch);
+			// int expectedTravelTimeMsecBackward = 
+			// 		TravelTimes.getInstance().expectedTravelTimeBetweenMatches(
+			// 				vehicleState.getVehicleId(), 
+			// 				previousAvlTime, 
+			// 				spatialMatch, previousMatch);
 			
-			int expectedTravelTimeMsec = Math.min(expectedTravelTimeMsecForward, expectedTravelTimeMsecBackward);
+			// int expectedTravelTimeMsec = Math.min(expectedTravelTimeMsecForward, expectedTravelTimeMsecBackward);
 			
-		
-			//expectedTravelTimeMsec = expectedTravelTimeMsecForward;
+			// TODO: the comparison above between "forward" and "backward" is causing unexpected matches
+			// See https://github.com/TheTransitClock/transitime/issues/52	
+			int expectedTravelTimeMsec = expectedTravelTimeMsecForward;
 			
 			// If looking at layover match and the match is different from 
 			// the previous one then it means we expect that the vehicle has
@@ -474,10 +475,10 @@ public class TemporalMatcher {
 			if (differenceFromExpectedTime != null 
 					&& expectedTravelTimeMsec > 2 * Time.MS_PER_MIN 
 					&& !differenceFromExpectedTime.isWithinBounds()) {
-				differenceFromExpectedTime = null;
 				logger.debug("Rejecting temporal match {} because it is not "
 						+ "within the allowable bounds.", 
 						differenceFromExpectedTime);
+				differenceFromExpectedTime = null;
 			}
 					
 			// If this temporal match is better than the previous best one
