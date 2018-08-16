@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.transitclock.applications.Core;
 import org.transitclock.config.BooleanConfigValue;
+import org.transitclock.config.IntegerConfigValue;
 import org.transitclock.config.StringConfigValue;
 import org.transitclock.core.AvlProcessor;
 import org.transitclock.db.structs.AvlReport;
@@ -78,6 +79,11 @@ public class PlaybackModule extends Module {
 			new BooleanConfigValue("transitclock.avl.playbackRealtime", 
 					false,
 					"Playback at normal time speed rather than as fast as possible.");
+	
+	protected static IntegerConfigValue playbackSkipIntervalMinutes =
+			new IntegerConfigValue("transitclock.avl.playbackSkipIntervalMinutes", 
+					120,
+					"If no data for this amount of minutes skip forward in time.");
 	/********************* Logging **************************/
 	private static final Logger logger = 
 			LoggerFactory.getLogger(PlaybackModule.class);
@@ -225,8 +231,8 @@ public class PlaybackModule extends Module {
 					if(last_avl_time>-1)
 					{
 						try {
-							// only sleep if values less than 10 minutes. This is to allow it skip days/hours of missing data.
-							if((avlReport.getTime()-last_avl_time)<600000)
+							// only sleep if values less than playbackSkipIntervalMinutes minutes. This is to allow it skip days/hours of missing data.
+							if((avlReport.getTime()-last_avl_time) < (playbackSkipIntervalMinutes.getValue()*Time.MS_PER_MIN))
 							{								
 								Thread.sleep(avlReport.getTime()-last_avl_time);
 							}
