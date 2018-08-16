@@ -193,6 +193,19 @@ public class PlaybackModule extends Module {
 		return avlReports;
 	}
 	
+	void sleepInIncrements(long clocktime, long sleep, long increment) throws InterruptedException
+	{
+		long counter=0;
+		
+		while(counter<sleep)
+		{
+			Thread.sleep(increment);
+			counter=counter+increment;
+			clocktime=clocktime+increment;
+			Core.getInstance().setSystemTime(clocktime);
+		}
+	}
+	
 	/* Reads AVL data from db and processes it
 	 * (non-Javadoc)
 	 * @see java.lang.Runnable#run()
@@ -217,7 +230,8 @@ public class PlaybackModule extends Module {
 							// only sleep if values less than playbackSkipIntervalMinutes minutes. This is to allow it skip days/hours of missing data.
 							if((avlReport.getTime()-last_avl_time) < (playbackSkipIntervalMinutes.getValue()*Time.MS_PER_MIN))
 							{								
-								Thread.sleep(avlReport.getTime()-last_avl_time);
+								//Thread.sleep(avlReport.getTime()-last_avl_time);
+								sleepInIncrements(Core.getInstance().getSystemTime(), avlReport.getTime()-last_avl_time, 10*Time.MS_PER_SEC);
 							}
 							last_avl_time=avlReport.getTime();
 						} catch (InterruptedException e) {							
