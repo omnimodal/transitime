@@ -206,26 +206,9 @@ public class PlaybackModule extends Module {
 		while (dbReadBeginTime < System.currentTimeMillis() && (playbackEndTimeStr.getValue().length()==0 || dbReadBeginTime<parsePlaybackEndTime(playbackEndTimeStr.getValue()))) {
 			List<AvlReport> avlReports = getBatchOfAvlReportsFromDb();
 			
-			// Process the AVL Reports read in.
-			
+			// Process the AVL Reports read in.			
 			for (AvlReport avlReport : avlReports) {
-				logger.info("Processing avlReport={}", avlReport);
-				
-				// Update the Core SystemTime to use this AVL time
-				Core.getInstance().setSystemTime(avlReport.getTime());
-				
-				DateFormat estFormat = new SimpleDateFormat("yyyyMMddHHmmss");				
-		        TimeZone estTime = TimeZone.getTimeZone("EST");
-		        estFormat.setTimeZone(estTime);
-		        
-		        TimeZone gmtTime = TimeZone.getTimeZone("GMT");		        
-		        DateFormat gmtFormat =  new SimpleDateFormat("yyyyMMddHHmmss");
-		        gmtFormat.setTimeZone(gmtTime);
-		        		    		        		       
-		        String estDate=estFormat.format(avlReport.getTime());
-		        String gmtDate=gmtFormat.format(avlReport.getTime());		        
-		        		     
-		        
+																						        
 				if(playbackRealtime.getValue()==true)
 				{
 					if(last_avl_time>-1)
@@ -245,6 +228,11 @@ public class PlaybackModule extends Module {
 						last_avl_time=avlReport.getTime();
 					}
 				}				
+				logger.info("Processing avlReport={}", avlReport);
+				
+				// Update the Core SystemTime to use this AVL time
+				Core.getInstance().setSystemTime(avlReport.getTime());
+				
 				// Do the actual processing of the AVL data
 				AvlProcessor.getInstance().processAvlReport(avlReport);						
 			
