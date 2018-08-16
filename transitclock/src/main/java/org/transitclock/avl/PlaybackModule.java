@@ -202,12 +202,12 @@ public class PlaybackModule extends Module {
 		
 		IntervalTimer timer = new IntervalTimer();
 		// Keep running as long as not trying to access in the future.
-				
+		long last_avl_time=-1;	
 		while (dbReadBeginTime < System.currentTimeMillis() && (playbackEndTimeStr.getValue().length()==0 || dbReadBeginTime<parsePlaybackEndTime(playbackEndTimeStr.getValue()))) {
 			List<AvlReport> avlReports = getBatchOfAvlReportsFromDb();
 			
 			// Process the AVL Reports read in.
-			long last_avl_time=-1;
+			
 			for (AvlReport avlReport : avlReports) {
 				logger.info("Processing avlReport={}", avlReport);
 				
