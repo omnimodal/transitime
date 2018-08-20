@@ -84,6 +84,12 @@ public class PlaybackModule extends Module {
 			new IntegerConfigValue("transitclock.avl.playbackSkipIntervalMinutes", 
 					120,
 					"If no data for this amount of minutes skip forward in time.");
+	
+	protected static IntegerConfigValue playbackStartDelayMinutes=
+			new IntegerConfigValue("transitclock.avl.playbackStartDelayMinutes", 
+					3,
+					"Time to sleep before starting. Gives some time to connect remote debugger.");
+	
 	/********************* Logging **************************/
 	private static final Logger logger = 
 			LoggerFactory.getLogger(PlaybackModule.class);
@@ -212,6 +218,12 @@ public class PlaybackModule extends Module {
 	 */
 	@Override
 	public void run() {
+		
+		try {
+			Thread.sleep(playbackStartDelayMinutes.getValue()*Time.MS_PER_MIN);
+		} catch (InterruptedException e) {
+		
+		}
 		
 		IntervalTimer timer = new IntervalTimer();
 		// Keep running as long as not trying to access in the future.
