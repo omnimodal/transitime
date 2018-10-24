@@ -1244,6 +1244,9 @@ public class AvlProcessor {
 				makeVehicleUnpredictableAndTerminateAssignment(vehicleState,
 						eventDescription, VehicleEvent.END_OF_BLOCK);
 
+				// Remove vehicle from VehicleDataCache
+				VehicleDataCache.getInstance().removeVehicle(vehicleState.getVehicleId());
+
 				// Return that end of block reached
 				return true;
 			}
