@@ -18,61 +18,92 @@ package org.transitclock.custom.lynx;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.HashMap;
 import java.util.zip.GZIPInputStream;
 
-import org.apache.commons.codec.binary.Base64;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.transitclock.applications.Core;
-import org.transitclock.avl.AvlModule;
 import org.transitclock.avl.PollUrlAvlModule;
+import org.transitclock.config.IntegerConfigValue;
 import org.transitclock.config.StringConfigValue;
 import org.transitclock.configData.AvlConfig;
 import org.transitclock.db.structs.AvlReport;
 import org.transitclock.db.structs.AvlReport.AssignmentType;
 import org.transitclock.db.structs.Route;
+import org.transitclock.db.structs.Stop;
+import org.transitclock.db.structs.TripPattern;
+import org.transitclock.gtfs.DbConfig;
 import org.transitclock.modules.Module;
 import org.transitclock.utils.IntervalTimer;
 import org.transitclock.utils.Time;
 
 /**
- * AVL module for reading AVL data from a DoubleMap feed.
+ * AVL module for reading AVL data, routes and stops information from DoubleMap feeds.
+ * 
+ * DoubleMap provides three API endpoints that can be used in conjunction to create AvlReports: `buses`, `routes` and `stops`.
+ * The `stops` endpoint provides info on all the stops configured in the system, and is processed once at startup.
+ * The `routes` endpoint provides info on currently active routes, and is processed periodically.
+ * Both of these endpoints are used to create lookup tables between the internal DoubleMap IDS and the GTFS IDs.
+ * The `buses` endpoint is the main AVL feed that is processed frequently.
+ * 
+ * Note that this module requires the Core to reference loaded GTFS data for matching, 
+ * which is somewhat unusual for an AVL module in TheTransitClock.  
  * 
  * @author Sean Óg Crudden
+ * @author Nathan Selikoff
  *
  */
 public class DoubleMapAvlModule extends PollUrlAvlModule {
 
-	private static StringConfigValue doubleMapBusLocFeedUrl = new StringConfigValue(
-			"transitclock.avl.doubleMapLocFeedUrl", "http://golynx.doublemap.com/map/v2/buses",
-			"The URL of the BusLoc json feed to use.");
+	private static StringConfigValue busesUrl = new StringConfigValue(
+			"transitclock.avl.doubleMapBusesUrl", "http://golynx.doublemap.com/map/v2/buses",
+			"The URL of the DoubleMap /buses endpoint (AVL feed)");
 
-	private static StringConfigValue routeLookUpURL = new StringConfigValue("transitclock.avl.doubleMapRouteLookUpURL",
-			"http://golynx.doublemap.com/map/v2/routes", "The URL to read the route info from.");
+	private static StringConfigValue routesUrl = new StringConfigValue("transitclock.avl.doubleMapRoutesUrl",
+			"http://golynx.doublemap.com/map/v2/routes", "The URL of the DoubleMap /routes endpoint (active routes feed)");
 
-	private static StringConfigValue stopLookUpURL = new StringConfigValue("transitclock.avl.doubleMapStopLookUpURL",
-			"http://golynx.doublemap.com/map/v2/stops", "The URL to read the stop info from.");
+	private static StringConfigValue stopsUrl = new StringConfigValue("transitclock.avl.doubleMapStopsUrl",
+			"http://golynx.doublemap.com/map/v2/stops", "The URL of the DoubleMap /stops endpoint (stop information feed)");
 
+	/**
+	 * How frequently the DoubleMap routes feed should be polled for new data.
+	 * Should be at least 5 minutes (300 seconds) per API documentation
+	 * @return 
+	 */
+	public static int getSecondsBetweenRoutesPolling() {
+		return secondsBetweenRoutesPolling.getValue();
+	}
+	private static IntegerConfigValue secondsBetweenRoutesPolling =
+			new IntegerConfigValue("transitclock.avl.doubleMapRoutesPollingRateSecs", 300,
+					"How frequently the DoubleMap routes feed should be polled for new data. Should be at least 5 minutes (300 seconds) per API documentation.");
+
+	IntervalTimer routesFeedPollingTimer = new IntervalTimer();
+	
 	// If debugging feed and want to not actually process
 	// AVL reports to generate predictions and such then
 	// set shouldProcessAvl to false;
 	private static boolean shouldProcessAvl = true;
-
-	HashMap<Integer, String> routeLookUp = new HashMap<Integer, String>();
 	
-	HashMap<Integer, String> stopLookUp=new  HashMap<Integer, String>();
-	// For logging use AvlModule class so that will end up in the AVL log file
-	private static final Logger logger = LoggerFactory.getLogger(AvlModule.class);
+	// For matching DoubleMap internal route ID to GTFS route_id
+	HashMap<Integer, String> routeLookup = new HashMap<Integer, String>();
+
+	// For matching DoubleMap internal stop ID to GTFS stop_id
+	HashMap<Integer, String> stopLookup = new HashMap<Integer, String>();
+
+	private static final Logger logger = LoggerFactory.getLogger(DoubleMapAvlModule.class);
 
 	/********************** Member Functions **************************/
 
@@ -81,238 +112,368 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 	 * 
 	 * @param agencyId
 	 */
-	public DoubleMapAvlModule(String agencyId) {
+	public DoubleMapAvlModule(String agencyId) throws Exception {
 		super(agencyId);
+
+		// Log warnings if rate limits are exceeded per DoubleMap API documentation
+		if (getSecondsBetweenRoutesPolling() < 300) {
+			logger.warn("Polling rate too frequent ({} seconds); transitclock.avl.doubleMapRoutesPollingRateSecs must be 5 minutes (300 seconds) or greater", 
+					getSecondsBetweenRoutesPolling());
+		}
+		if (AvlConfig.getSecondsBetweenAvlFeedPolling() < 10) {
+			logger.warn("Polling rate too frequent ({} seconds); transitclock.avl.feedPollingRateSecs must be 10 seconds or greater", 
+					AvlConfig.getSecondsBetweenAvlFeedPolling());
+		}
 		
 		try {
-			// Read in the route and stop info so can map to GTFS ids.
+			// Read in the route and stop info so can map to GTFS IDs.
 			readDoubleMapStopData();
 			readDoubleMapRouteData();
+
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			logger.error("Could not process stops and routes data; DoubleMapAvlModule will not be able to run. Error message: {}", e.getMessage(), e);
 			e.printStackTrace();
+
+			// re-throw an exception to make sure the module isn't loaded
+			throw new Exception(e.getMessage());
 		}
 	}
 
 	/**
-	 * Returns URL to use
+	 * @return URL to use for polling AVL feed
 	 */
 	@Override
 	protected String getUrl() {
-		return doubleMapBusLocFeedUrl.getValue();
+		return busesUrl.getValue();
 	}
 
 	/**
 	 * Called when AVL data is read from URL. Processes the JSON data and calls
 	 * processAvlReport() for each AVL report.
+	 * @param in
+	 * @return Collection of AVL reports
 	 */
 	@Override
 	protected Collection<AvlReport> processData(InputStream in) throws Exception {
+		// Process routes data if enough time has passed
+		if (routesFeedPollingTimer.elapsedMsec() >= getSecondsBetweenRoutesPolling() * Time.MS_PER_SEC) {
+			logger.info("Processing DoubleMap routes data");
+			try {
+				readDoubleMapRouteData();
+			} catch (Exception e) {
+				logger.error("Could not process routes data; will retry in {} seconds. Error message: {}", getSecondsBetweenRoutesPolling(), e.getMessage(), e);
+				e.printStackTrace();
+			}
+			routesFeedPollingTimer.resetTimer();
+		}
+		
+		Collection<AvlReport> avlReportsReadIn = new ArrayList<AvlReport>();
+
 		// Get the JSON string containing the AVL data
 		String jsonStr = getJsonString(in);
-		Collection<AvlReport> avlReportsReadIn = new ArrayList<AvlReport>();
 		try {
-			// Convert JSON string to a JSON array.
-			JSONArray entities = new JSONArray(jsonStr);
-
+			JSONArray vehicles = new JSONArray(jsonStr);
+			logger.debug("Processing {} vehicles from DoubleMap buses feed", vehicles.length());
 			
-			for (int i = 0; i < entities.length(); i++) {
-				JSONObject vehicle = entities.getJSONObject(i);
-
-				Integer routeid = vehicle.getInt("route");
-
-				if (routeid != null) {
-					long timestamp = vehicle.getLong("lastUpdate");
-
-					String source = null;
-
-					if (vehicle.getJSONObject("fields").has("type")) {
-						source = vehicle.getJSONObject("fields").getString("type");
-					} else {
-						source = new String("None");
-					}
-
-					// Create the AvlReport
-					AvlReport avlReport = new AvlReport(vehicle.getString("name"), timestamp * Time.MS_PER_SEC,
-							vehicle.getDouble("lat"), vehicle.getDouble("lon"), Float.NaN, Float.NaN, source);
-
-					// Actually set the assignment
-					if (routeLookUp.containsKey(routeid)) {
-						avlReport.setAssignment(routeLookUp.get(routeid), AssignmentType.ROUTE_ID);
-
-						logger.debug("From DoubleMapAvlModule {}", avlReport);
-
-						if (shouldProcessAvl) {
-							avlReportsReadIn.add(avlReport);
-						}
-					}else
-					{
-						logger.error("From DoubleMapAvlModule {}. Could not find route map entry for route {}.", avlReport,routeid);
-					}
+			for (int i = 0; i < vehicles.length(); i++) {
+				JSONObject vehicle = vehicles.getJSONObject(i);
+				AvlReport avlReport = createAvlReportFromDoubleMapBus(vehicle);
+				if (shouldProcessAvl) {
+					avlReportsReadIn.add(avlReport);
 				}
 			}
+
 			// Return all the AVL reports read in
 			return avlReportsReadIn;
+
 		} catch (JSONException e) {
-			logger.error("Error parsing JSON. {}. {}", e.getMessage(), jsonStr, e);
-			return new ArrayList<AvlReport>();
-
+			logger.error("Error parsing JSON. message={}, jsonStr={}, e={}", e.getMessage(), jsonStr, e);
+			return avlReportsReadIn;
 		}
-
 	}
 	
+	/**
+	 * Create an appropriate input stream for the given URL. Supports compression.
+	 * @param fullUrl
+	 * @return input stream
+	 * @throws Exception
+	 */
+	protected InputStream getInputStream(String fullUrl) throws Exception {
+		// Create the connection
+		URL url = new URL(fullUrl);
+		URLConnection con = url.openConnection();
+
+		// Set the timeout so don't wait forever
+		int timeoutMsec = AvlConfig.getAvlFeedTimeoutInMSecs();
+		con.setConnectTimeout(timeoutMsec);
+		con.setReadTimeout(timeoutMsec);
+
+		// Request compressed data to reduce bandwidth used
+		if (useCompression)
+			con.setRequestProperty("Accept-Encoding", "gzip,deflate");
+
+		// Set any additional AVL feed specific request headers
+		setRequestHeaders(con);
+		
+		// Create appropriate input stream depending on whether content is 
+		// compressed or not
+		InputStream in = con.getInputStream();
+		if ("gzip".equals(con.getContentEncoding())) {
+		    in = new GZIPInputStream(in);
+		    logger.debug("Returned data is compressed");
+		} else {
+		    logger.debug("Returned data is NOT compressed");			
+		}
+		
+		return in;
+	}
+	
+	/**
+	 * Gets, reads and processes DoubleMap stops feed 
+	 * @throws Exception
+	 */
 	protected void readDoubleMapStopData() throws Exception {
-		// For logging
 		IntervalTimer timer = new IntervalTimer();
 
 		// Get from the AVL feed subclass the URL to use for this feed
-		String fullUrl = stopLookUpURL.getValue();
+		String fullUrl = stopsUrl.getValue();
 
-		// Log what is happening
-		logger.info("Getting stop data from feed using url=" + stopLookUpURL);
-
-		// Create the connection
-		URL url = new URL(fullUrl);
-		URLConnection con = url.openConnection();
-
-		// Set the timeout so don't wait forever
-		int timeoutMsec = AvlConfig.getAvlFeedTimeoutInMSecs();
-		con.setConnectTimeout(timeoutMsec);
-		con.setReadTimeout(timeoutMsec);
-
-		// Set any additional AVL feed specific request headers
-		setRequestHeaders(con);
-
-		// Create appropriate input stream depending on whether content is
-		// compressed or not
-		InputStream in = con.getInputStream();
-
-		// For debugging
+		logger.info("Getting stop data from feed using url=" + stopsUrl);
+		InputStream in = getInputStream(fullUrl);
 		logger.debug("Time to access inputstream {} msec", timer.elapsedMsec());
 
-		processStopData(in);
+		timer.resetTimer();
 
+		processStopData(in);		
+		logger.debug("Time to process stop data {} msec", timer.elapsedMsec());
+
+		// Cleanup
 		in.close();
-
+		timer.resetTimer();
 	}
 
-
-
+	/**
+	 * Gets, reads and processes DoubleMap routes feed 
+	 * @throws Exception
+	 */
 	protected void readDoubleMapRouteData() throws Exception {
-		// For logging
 		IntervalTimer timer = new IntervalTimer();
 
 		// Get from the AVL feed subclass the URL to use for this feed
-		String fullUrl = routeLookUpURL.getValue();
+		String fullUrl = routesUrl.getValue();
 
-		// Log what is happening
-		logger.info("Getting route data from feed using url=" + routeLookUpURL);
-
-		// Create the connection
-		URL url = new URL(fullUrl);
-		URLConnection con = url.openConnection();
-
-		// Set the timeout so don't wait forever
-		int timeoutMsec = AvlConfig.getAvlFeedTimeoutInMSecs();
-		con.setConnectTimeout(timeoutMsec);
-		con.setReadTimeout(timeoutMsec);
-
-		// Set any additional AVL feed specific request headers
-		setRequestHeaders(con);
-
-		// Create appropriate input stream depending on whether content is
-		// compressed or not
-		InputStream in = con.getInputStream();
-
-		// For debugging
+		logger.info("Getting route data from feed using url=" + routesUrl);
+		InputStream in = getInputStream(fullUrl);
 		logger.debug("Time to access inputstream {} msec", timer.elapsedMsec());
 
+		timer.resetTimer();
+
+		// Clear the route lookup and rebuild it
+		routeLookup.clear();
 		processRouteData(in);
+		logger.debug("Time to process route data {} msec", timer.elapsedMsec());
+		logger.debug("routeLookup: {}", routeLookup);
 
+		// Cleanup
 		in.close();
-
+		timer.resetTimer();
 	}
 	
-
+	/**
+	 * Build the lookup for matching DoubleMap internal stop id to GTFS stop_id
+	 * 
+	 * The DoubleMap stops endpoint is a JSON feed of stops that have been configured in their system.
+	 * The unique id for each stop is internal to DoubleMap, but stops also contain a "code"
+	 * attribute, which (should) match the GTFS stop_id. This feed is meant to be processed once per session,
+	 * which in this case means when this module starts (when TheTransitClock starts)
+	 * 
+	 * @param in
+	 * @throws JSONException
+	 * @throws IOException
+	 */
 	private void processStopData(InputStream in) throws JSONException, IOException {
-		// TODO Auto-generated method stub
 		String jsonStr = getJsonString(in);
-
 		JSONArray stops = new JSONArray(jsonStr);
 		
 		for (int i = 0; i < stops.length(); i++) {
-			
 			JSONObject stop = stops.getJSONObject(i);
 			
-			stopLookUp.put(stop.getInt("id"), stop.getString("code"));				
-		}
-	}
+			// note that the DoubleMap stop "code" corresponds to the GTFS stop_id, not stop_code
+			Integer id = stop.getInt("id");
+			String code = stop.getString("code");
 
-	private void processRouteData(InputStream in) throws JSONException, IOException {
-		// TODO Auto-generated method stub
-		String jsonStr = getJsonString(in);
-
-		JSONArray entities = new JSONArray(jsonStr);
-		
-	
-		for (int i = 0; i < entities.length(); i++) {
-			
-
-			JSONObject route = entities.getJSONObject(i);
-
-			JSONArray stops = route.getJSONArray("stops");
-			
-			HashMap<Route, Integer> stopCounterByRoute=new HashMap<Route, Integer> ();
-
-			for (int j = 0; j < stops.length(); j++) {
-								
-				Integer stop = stops.getInt(j);
-										
-				Collection<Route> possibleRoutes = Core.getInstance().getDbConfig().getRoutesForStop(stopLookUp.get(stop));
-				
-				if (possibleRoutes!=null && possibleRoutes.size() >  1) {
-					
-					Iterator<Route> iterator = possibleRoutes.iterator(); 
-					while (iterator.hasNext()) {												
-						Route currentRoute=iterator.next();
-						if(stopCounterByRoute.containsKey(currentRoute))
-						{
-							stopCounterByRoute.put(currentRoute, stopCounterByRoute.get(currentRoute)+1);
-						}else
-						{
-							stopCounterByRoute.put(currentRoute, 1);
-						}
-						
-					}
-					
-				}
-			}			
-			if(findMax(stopCounterByRoute,route.getInt("id"))!=null)
-					routeLookUp.put(route.getInt("id"), findMax(stopCounterByRoute,route.getInt("id")));			
-		}
-
-	}
-
-	private String findMax(HashMap<Route, Integer> stopCounterByRoute, Integer routeId) {
-		
-		Iterator<Route> keys=stopCounterByRoute.keySet().iterator();
-		
-		Integer max=0;
-		Route maxRoute=null;
-		while(keys.hasNext())
-		{
-		
-			Route key=keys.next();
-			if(stopCounterByRoute.get(key)>max)
-			{
-				max=stopCounterByRoute.get(key);
-				maxRoute=key;
+			if (code.equals(null)) {
+				logger.error("Stop with DoubleMap id={}: `code` is missing or null. Not adding to lookup. stop={}", id, stop);
+				continue;
 			}
 			
+			Stop gtfsStop = Core.getInstance().getDbConfig().getStop(code);
+			if (gtfsStop.equals(null)) {
+				logger.error("Stop with DoubleMap id={}, code={}; no matching GTFS stop found. Not adding to lookup. stop={}", id, code, stop);
+				continue;
+			}
+
+			stopLookup.put(id, code);
 		}
-		if(max<5)
-			logger.info("Route {} has max stops matching of {}. DoubleMap route is {}.", maxRoute, max, routeId);
-		return maxRoute.getId();
+	}
+
+	/**
+	 * Build the lookup for matching DoubleMap internal route id to GTFS route_id
+	 * 
+	 * The DoubleMap routes endpoint is a JSON feed of routes that have been configured in their system.
+	 * The unique id for each route is internal to DoubleMap, and routes do NOT contain the GTFS route_id.
+	 * The best available data to use for matching is an array of stop ids,
+	 * which is used to compare to the GTFS data to try and find a best match.
+	 * 
+	 * The array of stop ids should be equivalent to the stop ids you would get from the GTFS stop_times
+	 * data, but we don't assume that the stop ids are ordered, so we're not comparing an ordered list.
+	 * Instead, we construct a Set of stop ids, convert those to GTFS stop ids, and intersect that with 
+	 * the Set of GTFS stop ids for each route to find potential matches.
+	 * 
+	 * @param in
+	 * @throws JSONException
+	 * @throws IOException
+	 */
+	private void processRouteData(InputStream in) throws JSONException, IOException {
+		String jsonStr = getJsonString(in);
+		JSONArray doubleMapRoutes = new JSONArray(jsonStr);
+
+		// Create a map between all GTFS routes and the GTFS stop_ids associated with them via trips
+		HashMap<Route, HashSet<String>> stopIdsByRoute = new HashMap<Route, HashSet<String>> ();
+		List<Route> gtfsRoutes = Core.getInstance().getDbConfig().getRoutes();
+		for (Route route : gtfsRoutes) {
+			HashSet<String> stopIds = getStopIdsForRoute(route.getId());
+			stopIdsByRoute.put(route, stopIds);
+		}
+
+		// Loop through the DoubleMap routes, processing them one at a time
+		for (int i = 0; i < doubleMapRoutes.length(); i++) {
+			// Each route has an internal DoubleMap id and an array of internal DoubleMap stop ids
+			JSONObject doubleMapRoute = doubleMapRoutes.getJSONObject(i);
+			Integer doubleMapRouteId = doubleMapRoute.getInt("id");
+			JSONArray doubleMapStopIds = doubleMapRoute.getJSONArray("stops");
+
+			// Convert to GTFS stop ids and find possible matching routes
+			Set<String> subset = getGtfsStopIds(doubleMapStopIds);
+			HashSet<Route> possibleRoutes = getPossibleRoutes(stopIdsByRoute, subset);					
+
+			// If we found one match, we're good to go
+			// Otherwise, log the errors
+			if (possibleRoutes.size() == 1) {
+				for (Route route : possibleRoutes) {
+					logger.debug("Found single route match for DoubleMap route id = {}, GTFS route_id = {}. Adding to lookup.", 
+							doubleMapRouteId, route.getId());
+					routeLookup.put(doubleMapRouteId, route.getId());
+				}
+			} else if (possibleRoutes.size() > 1) {
+				logger.error("Found multiple route matches ({}) for DoubleMap route id = {}. Not adding to lookup. possibleRoutes={}", 
+						possibleRoutes.size(), doubleMapRouteId, possibleRoutes);
+			} else {
+				logger.error("Unable to find route match for DoubleMap route id = {}", doubleMapRouteId);
+			}
+		}
+	}
+
+	/**
+	 * Use the stopLookup to convert DoubleMap stop ids to GTFS stop_ids and create a set of unique IDs
+	 * @param doubleMapStopIds
+	 * @return Set of GTFS stop_ids
+	 */
+	private Set<String> getGtfsStopIds(JSONArray doubleMapStopIds) {
+		Set<String> gtfsStopIds = new HashSet<String>();
+		for (int j = 0; j < doubleMapStopIds.length(); j++) {
+			Integer doubleMapStopId = doubleMapStopIds.getInt(j);
+			if (stopLookup.containsKey(doubleMapStopId)) {
+				gtfsStopIds.add(stopLookup.get(doubleMapStopId));
+			} else {
+				logger.warn("stopLookup missing DoubleMap id {}", doubleMapStopId);
+			}
+		}
+		
+		return gtfsStopIds;
+	}
+
+	/**
+	 * Compare the set of GTFS stop_ids for this DoubleMap route to each GTFS route's set of GTFS stop_ids.
+	 * The GTFS route's set of stop_ids is the superset (contains all trip patterns).
+	 * The DoubleMap route's set of stop_ids should be fully contained in the superset
+	 * in order for this to be considered a match.
+	 * 
+	 * @param stopIdsByRoute
+	 * @param subset
+	 * @return set of possible matching routes
+	 */
+	private HashSet<Route> getPossibleRoutes(HashMap<Route, HashSet<String>> stopIdsByRoute, Set<String> subset) {
+		HashSet<Route> possibleRoutes = new HashSet<Route>(); 
+		for (Map.Entry<Route, HashSet<String>> entry : stopIdsByRoute.entrySet()) {
+		    Route route = entry.getKey();
+		    HashSet<String> superset = entry.getValue();
+		    HashSet<String> intersection = new HashSet<String>();
+		    intersection.addAll(superset);
+		    intersection.retainAll(subset);
+		    if (intersection.equals(subset)) {
+		    	logger.debug("Found potential route match: {}", route.getId());
+		    	possibleRoutes.add(route);
+		    }
+		}
+		
+		return possibleRoutes;
+	}
+
+	/**
+	 * Returns the set of stop IDs for the specified route.
+	 * 
+	 * @param routeId
+	 * @return collection of stop IDs for route
+	 */
+	private HashSet<String> getStopIdsForRoute(String routeId) {
+		// Note: there is a similar private method in DbConfig that could be made public, but we want a HashSet not a Collection
+		HashSet<String> stopIds = new HashSet<String>();
+		
+		List<TripPattern> tripPatternsForRoute = Core.getInstance().getDbConfig().getTripPatternsForRoute(routeId);
+		for (TripPattern tripPattern : tripPatternsForRoute) {
+			for (String stopId : tripPattern.getStopIds()) {
+				stopIds.add(stopId);
+			}
+		}
+		
+		return stopIds;
+	}
+
+	/**
+	 * Create a single AvlReport and set the assignment if possible based on the DoubleMap JSON data 
+	 * @param vehicle
+	 * @return AVL report
+	 */
+	private AvlReport createAvlReportFromDoubleMapBus(JSONObject vehicle) {
+		logger.debug("DoubleMap bus={}", vehicle);
+
+		// Process the data
+		Integer routeId = vehicle.getInt("route");
+		String vehicleId = vehicle.getString("name");
+		long time = vehicle.getLong("lastUpdate") * Time.MS_PER_SEC;
+		double lat = vehicle.getDouble("lat");
+		double lon = vehicle.getDouble("lon");
+		Float speed = Float.NaN;
+		// Note: there is a "heading" field in the feed, but it is null for LYNX, so we don't have enough info yet to process it
+		Float heading = Float.NaN;
+		String source = vehicle.getJSONObject("fields").has("type") ? vehicle.getJSONObject("fields").getString("type") : null;
+
+		// Create the AvlReport
+		AvlReport avlReport = new AvlReport(vehicleId, time, lat, lon, speed, heading, source);
+
+		// Set the route assignment if possible
+		if (routeId.equals(null)) {
+			logger.warn("Vehicle does not have an assignment, DoubleMap bus={}, avlReport={}", vehicle, avlReport);
+		} else if (!routeLookup.containsKey(routeId)) {
+			logger.warn("Could not find route map entry for DoubleMap routeId={}, DoubleMap bus={}, avlReport={}", routeId, vehicle, avlReport);
+		} else {
+			String gtfsRouteId = routeLookup.get(routeId);
+			avlReport.setAssignment(gtfsRouteId, AssignmentType.ROUTE_ID);
+			logger.debug("Successfully set route assignment for DoubleMap routeId={}, GTFS route_id={}, DoubleMap bus={}, avlReport={}", routeId, gtfsRouteId, vehicle, avlReport);
+		}
+		
+		return avlReport;
 	}
 
 	/**
@@ -323,8 +484,10 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 		// This way the AVL data is logged, but that is all.
 		shouldProcessAvl = false;
 
+		// Create a Core so GTFS data gets loaded and cached prior to processing stops and routes
+		Core.getInstance();
+		
 		// Create a DoubleMapAvlModule for testing
 		Module.start("org.transitclock.custom.lynx.DoubleMapAvlModule");
 	}
-
 }
