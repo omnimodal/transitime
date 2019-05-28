@@ -20,7 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLConnection;
+import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -45,7 +45,6 @@ import org.transitclock.db.structs.AvlReport.AssignmentType;
 import org.transitclock.db.structs.Route;
 import org.transitclock.db.structs.Stop;
 import org.transitclock.db.structs.TripPattern;
-import org.transitclock.gtfs.DbConfig;
 import org.transitclock.modules.Module;
 import org.transitclock.utils.IntervalTimer;
 import org.transitclock.utils.Time;
@@ -112,31 +111,20 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 	 * 
 	 * @param agencyId
 	 */
-	public DoubleMapAvlModule(String agencyId) throws Exception {
+	public DoubleMapAvlModule(String agencyId) throws IllegalArgumentException, JSONException, MalformedURLException, IOException {
 		super(agencyId);
 
-		// Log warnings if rate limits are exceeded per DoubleMap API documentation
+		// Check that rate limits are not exceeded per DoubleMap API documentation
 		if (getSecondsBetweenRoutesPolling() < 300) {
-			logger.warn("Polling rate too frequent ({} seconds); transitclock.avl.doubleMapRoutesPollingRateSecs must be 5 minutes (300 seconds) or greater", 
-					getSecondsBetweenRoutesPolling());
+			throw new IllegalArgumentException("Polling rate too frequent; transitclock.avl.doubleMapRoutesPollingRateSecs must be 5 minutes (300 seconds) or greater");
 		}
 		if (AvlConfig.getSecondsBetweenAvlFeedPolling() < 10) {
-			logger.warn("Polling rate too frequent ({} seconds); transitclock.avl.feedPollingRateSecs must be 10 seconds or greater", 
-					AvlConfig.getSecondsBetweenAvlFeedPolling());
+			throw new IllegalArgumentException("Polling rate too frequent; transitclock.avl.feedPollingRateSecs must be 10 seconds or greater");
 		}
 		
-		try {
-			// Read in the route and stop info so can map to GTFS IDs.
-			readDoubleMapStopData();
-			readDoubleMapRouteData();
-
-		} catch (Exception e) {
-			logger.error("Could not process stops and routes data; DoubleMapAvlModule will not be able to run. Error message: {}", e.getMessage(), e);
-			e.printStackTrace();
-
-			// re-throw an exception to make sure the module isn't loaded
-			throw new Exception(e.getMessage());
-		}
+		// Read in and process the stop and routes info so we can map to GTFS IDs.
+		readDoubleMapStopData();
+		readDoubleMapRouteData();
 	}
 
 	/**
@@ -149,21 +137,15 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 
 	/**
 	 * Called when AVL data is read from URL. Processes the JSON data and calls
-	 * processAvlReport() for each AVL report.
+	 * processAvlReport() for each AVL report. Also gets and processes routes data periodically.
 	 * @param in
 	 * @return Collection of AVL reports
 	 */
 	@Override
-	protected Collection<AvlReport> processData(InputStream in) throws Exception {
+	protected Collection<AvlReport> processData(InputStream in) throws JSONException, IOException, MalformedURLException {
 		// Process routes data if enough time has passed
 		if (routesFeedPollingTimer.elapsedMsec() >= getSecondsBetweenRoutesPolling() * Time.MS_PER_SEC) {
-			logger.info("Processing DoubleMap routes data");
-			try {
-				readDoubleMapRouteData();
-			} catch (Exception e) {
-				logger.error("Could not process routes data; will retry in {} seconds. Error message: {}", getSecondsBetweenRoutesPolling(), e.getMessage(), e);
-				e.printStackTrace();
-			}
+			readDoubleMapRouteData();
 			routesFeedPollingTimer.resetTimer();
 		}
 		
@@ -171,37 +153,33 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 
 		// Get the JSON string containing the AVL data
 		String jsonStr = getJsonString(in);
-		try {
-			JSONArray vehicles = new JSONArray(jsonStr);
-			logger.debug("Processing {} vehicles from DoubleMap buses feed", vehicles.length());
-			
-			for (int i = 0; i < vehicles.length(); i++) {
-				JSONObject vehicle = vehicles.getJSONObject(i);
-				AvlReport avlReport = createAvlReportFromDoubleMapBus(vehicle);
-				if (shouldProcessAvl) {
-					avlReportsReadIn.add(avlReport);
-				}
+
+		JSONArray vehicles = new JSONArray(jsonStr);
+		logger.debug("Processing {} vehicles from DoubleMap buses feed", vehicles.length());
+		
+		for (int i = 0; i < vehicles.length(); i++) {
+			JSONObject vehicle = vehicles.getJSONObject(i);
+			AvlReport avlReport = createAvlReportFromDoubleMapBus(vehicle);
+			if (shouldProcessAvl) {
+				avlReportsReadIn.add(avlReport);
 			}
-
-			// Return all the AVL reports read in
-			return avlReportsReadIn;
-
-		} catch (JSONException e) {
-			logger.error("Error parsing JSON. message={}, jsonStr={}, e={}", e.getMessage(), jsonStr, e);
-			return avlReportsReadIn;
 		}
+
+		// Return all the AVL reports read in
+		return avlReportsReadIn;			
 	}
 	
 	/**
 	 * Create an appropriate input stream for the given URL. Supports compression.
 	 * @param fullUrl
 	 * @return input stream
-	 * @throws Exception
 	 */
-	protected InputStream getInputStream(String fullUrl) throws Exception {
+	protected InputStream getInputStream(String fullUrl) throws IOException, MalformedURLException {
+		InputStream in = null;
+		
 		// Create the connection
 		URL url = new URL(fullUrl);
-		URLConnection con = url.openConnection();
+		HttpURLConnection con = (HttpURLConnection) url.openConnection();
 
 		// Set the timeout so don't wait forever
 		int timeoutMsec = AvlConfig.getAvlFeedTimeoutInMSecs();
@@ -215,9 +193,8 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 		// Set any additional AVL feed specific request headers
 		setRequestHeaders(con);
 		
-		// Create appropriate input stream depending on whether content is 
-		// compressed or not
-		InputStream in = con.getInputStream();
+		// Create appropriate input stream depending on whether content is compressed or not
+		in = con.getInputStream();
 		if ("gzip".equals(con.getContentEncoding())) {
 		    in = new GZIPInputStream(in);
 		    logger.debug("Returned data is compressed");
@@ -229,54 +206,83 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 	}
 	
 	/**
-	 * Gets, reads and processes DoubleMap stops feed 
-	 * @throws Exception
+	 * Gets, reads and processes DoubleMap stops feed.
+	 * This is essential for the module to be functional, so exceptions aren't caught
 	 */
-	protected void readDoubleMapStopData() throws Exception {
+	protected void readDoubleMapStopData() throws JSONException, IOException, MalformedURLException {
 		IntervalTimer timer = new IntervalTimer();
-
+		InputStream in = null;
+		
 		// Get from the AVL feed subclass the URL to use for this feed
 		String fullUrl = stopsUrl.getValue();
-
 		logger.info("Getting stop data from feed using url=" + stopsUrl);
-		InputStream in = getInputStream(fullUrl);
-		logger.debug("Time to access inputstream {} msec", timer.elapsedMsec());
+		
+		// Get and process the stops data
+		try {
+			in = getInputStream(fullUrl);
+			logger.debug("Time to access inputstream {} msec", timer.elapsedMsec());
 
-		timer.resetTimer();
+			timer.resetTimer();
 
-		processStopData(in);		
-		logger.debug("Time to process stop data {} msec", timer.elapsedMsec());
+			processStopData(in);
+			logger.debug("Time to process stop data {} msec", timer.elapsedMsec());
 
-		// Cleanup
-		in.close();
-		timer.resetTimer();
+		} finally {
+			// Clean up regardless of whether processing was successful
+	        if (in != null) {
+	            try {
+	                in.close();
+	            } catch (IOException e) {
+	                logger.error(e.getMessage());
+	                e.printStackTrace();
+	            }
+	        }			
+		}
 	}
 
 	/**
-	 * Gets, reads and processes DoubleMap routes feed 
-	 * @throws Exception
+	 * Gets, reads and processes DoubleMap routes feed
+	 * Catch and log exceptions that may be transient, as we'll be trying again periodically 
 	 */
-	protected void readDoubleMapRouteData() throws Exception {
+	protected void readDoubleMapRouteData() throws MalformedURLException {
 		IntervalTimer timer = new IntervalTimer();
+		InputStream in = null;
 
 		// Get from the AVL feed subclass the URL to use for this feed
 		String fullUrl = routesUrl.getValue();
-
 		logger.info("Getting route data from feed using url=" + routesUrl);
-		InputStream in = getInputStream(fullUrl);
-		logger.debug("Time to access inputstream {} msec", timer.elapsedMsec());
 
-		timer.resetTimer();
+		try {
+			in = getInputStream(fullUrl);
+			logger.debug("Time to access inputstream {} msec", timer.elapsedMsec());
+	
+			timer.resetTimer();
+	
+			// Clear the route lookup and rebuild it
+			routeLookup.clear();
+			processRouteData(in);
+			logger.debug("Time to process route data {} msec", timer.elapsedMsec());
+			logger.debug("routeLookup: {}", routeLookup);
 
-		// Clear the route lookup and rebuild it
-		routeLookup.clear();
-		processRouteData(in);
-		logger.debug("Time to process route data {} msec", timer.elapsedMsec());
-		logger.debug("routeLookup: {}", routeLookup);
+		} catch (JSONException e) {
+			logger.error(e.getMessage());
+			e.printStackTrace();
 
-		// Cleanup
-		in.close();
-		timer.resetTimer();
+		} catch (IOException e) {
+			logger.error(e.getMessage());
+			e.printStackTrace();
+	
+		} finally {
+			// Clean up regardless of whether processing was successful
+	        if (in != null) {
+	            try {
+	                in.close();
+	            } catch (IOException e) {
+	                logger.error(e.getMessage());
+	                e.printStackTrace();
+	            }
+	        }			
+		}
 	}
 	
 	/**
@@ -287,9 +293,7 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 	 * attribute, which (should) match the GTFS stop_id. This feed is meant to be processed once per session,
 	 * which in this case means when this module starts (when TheTransitClock starts)
 	 * 
-	 * @param in
-	 * @throws JSONException
-	 * @throws IOException
+	 * @param in, The JSON feed
 	 */
 	private void processStopData(InputStream in) throws JSONException, IOException {
 		String jsonStr = getJsonString(in);
@@ -331,8 +335,6 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 	 * the Set of GTFS stop ids for each route to find potential matches.
 	 * 
 	 * @param in
-	 * @throws JSONException
-	 * @throws IOException
 	 */
 	private void processRouteData(InputStream in) throws JSONException, IOException {
 		String jsonStr = getJsonString(in);
@@ -445,7 +447,7 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 	 * @param vehicle
 	 * @return AVL report
 	 */
-	private AvlReport createAvlReportFromDoubleMapBus(JSONObject vehicle) {
+	private AvlReport createAvlReportFromDoubleMapBus(JSONObject vehicle) throws JSONException {
 		logger.debug("DoubleMap bus={}", vehicle);
 
 		// Process the data
