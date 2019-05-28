@@ -41,6 +41,7 @@ import org.transitclock.db.structs.AvlReport;
 import org.transitclock.db.structs.Block;
 import org.transitclock.db.structs.Location;
 import org.transitclock.db.structs.Route;
+import org.transitclock.db.structs.ScheduleTime;
 import org.transitclock.db.structs.Stop;
 import org.transitclock.db.structs.Trip;
 import org.transitclock.db.structs.VectorWithHeading;
@@ -1269,8 +1270,14 @@ public class AvlProcessor {
 			Stop stop = Core.getInstance().getDbConfig().getStop(stopId);
 			Route route = vehicleState.getMatch().getRoute();
 			VehicleAtStopInfo stopInfo = vehicleState.getMatch().getAtStop();
-			Integer scheduledDepartureTime = stopInfo.getScheduleTime()
-					.getDepartureTime();
+			ScheduleTime scheduleTime = stopInfo.getScheduleTime();
+			Integer scheduledDepartureTime = null;
+			if (scheduleTime == null) {
+				logger.warn("Vehicle {} is at wait stop {}, but there is no schedule time, so cannot get departure time. "
+						+ "This could indicate a GTFS data or import issue, because wait stops should have schedule time", vehicleState.getVehicleId(), stop, stopInfo);
+			} else {
+				scheduledDepartureTime = scheduleTime.getDepartureTime();
+			}
 
 			String description = "Vehicle " + vehicleState.getVehicleId()
 					+ " still at stop " + stopId + " \"" + stop.getName()
