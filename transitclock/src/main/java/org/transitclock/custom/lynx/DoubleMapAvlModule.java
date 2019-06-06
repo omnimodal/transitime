@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.HashMap;
 import java.util.zip.GZIPInputStream;
 
@@ -312,7 +313,7 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 			}
 			
 			Stop gtfsStop = Core.getInstance().getDbConfig().getStop(code);
-			if (gtfsStop.equals(null)) {
+			if (gtfsStop == null) {
 				logger.error("Stop with DoubleMap id={}, code={}; no matching GTFS stop found. Not adding to lookup. stop={}", id, code, stop);
 				continue;
 			}
@@ -344,7 +345,8 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 		HashMap<Route, HashSet<String>> stopIdsByRoute = new HashMap<Route, HashSet<String>> ();
 		List<Route> gtfsRoutes = Core.getInstance().getDbConfig().getRoutes();
 		for (Route route : gtfsRoutes) {
-			HashSet<String> stopIds = getStopIdsForRoute(route.getId());
+			Collection<Stop> stops = route.getStops();
+			HashSet<String> stopIds = stops.stream().map(stop -> stop.getId()).collect(Collectors.toCollection(HashSet::new));
 			stopIdsByRoute.put(route, stopIds);
 		}
 
@@ -353,18 +355,34 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 			// Each route has an internal DoubleMap id and an array of internal DoubleMap stop ids
 			JSONObject doubleMapRoute = doubleMapRoutes.getJSONObject(i);
 			Integer doubleMapRouteId = doubleMapRoute.getInt("id");
-			JSONArray doubleMapStopIds = doubleMapRoute.getJSONArray("stops");
+			JSONArray doubleMapStopIds = doubleMapRoute.getJSONArray("stops");			
+			
+			logger.info("-----Starting to process DoubleMap route id={}", doubleMapRouteId);
 
-			// Convert to GTFS stop ids and find possible matching routes
-			Set<String> subset = getGtfsStopIds(doubleMapStopIds);
+			// Get unique DoubleMap stop ids (integers)
+			Set<Integer> uniqueDoubleMapStopIds = new HashSet<Integer>();
+			for (int j = 0; j < doubleMapStopIds.length(); j++) {
+				Integer doubleMapStopId = doubleMapStopIds.getInt(j);
+				uniqueDoubleMapStopIds.add(doubleMapStopId);
+			}
+
+			// Convert to GTFS stop ids (strings)
+			Set<String> subset = getGtfsStopIds(uniqueDoubleMapStopIds);
+			if (uniqueDoubleMapStopIds.size() != subset.size()) {
+				logger.error("Unable to convert all DoubleMap stop ids (count={}) to GTFS stop_ids (count={}). Not adding DoubleMap route id={} to lookup.", doubleMapStopIds.length(), subset.size(), doubleMapRouteId);
+				logger.info("-----Finished processing DoubleMap route id={}", doubleMapRouteId);
+				continue;
+			}
+			
+			// Find possible matching routes
 			HashSet<Route> possibleRoutes = getPossibleRoutes(stopIdsByRoute, subset);					
 
 			// If we found one match, we're good to go
 			// Otherwise, log the errors
 			if (possibleRoutes.size() == 1) {
 				for (Route route : possibleRoutes) {
-					logger.debug("Found single route match for DoubleMap route id = {}, GTFS route_id = {}. Adding to lookup.", 
-							doubleMapRouteId, route.getId());
+					logger.debug("Found single route match for DoubleMap route id={}, GTFS route_id={}. Adding to lookup. subset={}, superset={}", 
+							doubleMapRouteId, route.getId(), subset, stopIdsByRoute.get(route));
 					routeLookup.put(doubleMapRouteId, route.getId());
 				}
 			} else if (possibleRoutes.size() > 1) {
@@ -373,22 +391,25 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 			} else {
 				logger.error("Unable to find route match for DoubleMap route id = {}", doubleMapRouteId);
 			}
+			
+			logger.info("-----Finished processing DoubleMap route id={}", doubleMapRouteId);
 		}
 	}
 
 	/**
 	 * Use the stopLookup to convert DoubleMap stop ids to GTFS stop_ids and create a set of unique IDs
-	 * @param doubleMapStopIds
+	 * @param uniqueDoubleMapStopIds
 	 * @return Set of GTFS stop_ids
 	 */
-	private Set<String> getGtfsStopIds(JSONArray doubleMapStopIds) {
+	private Set<String> getGtfsStopIds(Set<Integer> uniqueDoubleMapStopIds) {
 		Set<String> gtfsStopIds = new HashSet<String>();
-		for (int j = 0; j < doubleMapStopIds.length(); j++) {
-			Integer doubleMapStopId = doubleMapStopIds.getInt(j);
+		for (Integer doubleMapStopId : uniqueDoubleMapStopIds) {
 			if (stopLookup.containsKey(doubleMapStopId)) {
-				gtfsStopIds.add(stopLookup.get(doubleMapStopId));
+				String gtfsStopId = stopLookup.get(doubleMapStopId);
+				gtfsStopIds.add(gtfsStopId);
+				logger.debug("GTFS stop_id={} added for doubleMapStopId={}", gtfsStopId, doubleMapStopId);
 			} else {
-				logger.warn("stopLookup missing DoubleMap id {}", doubleMapStopId);
+				logger.warn("stopLookup missing doubleMapStopId={}", doubleMapStopId);
 			}
 		}
 		
@@ -402,11 +423,18 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 	 * in order for this to be considered a match.
 	 * 
 	 * @param stopIdsByRoute
-	 * @param subset
+	 * @param subset - the DoubleMap route's set of stop ids, converted to GTFS stop_ids
 	 * @return set of possible matching routes
 	 */
 	private HashSet<Route> getPossibleRoutes(HashMap<Route, HashSet<String>> stopIdsByRoute, Set<String> subset) {
-		HashSet<Route> possibleRoutes = new HashSet<Route>(); 
+		HashSet<Route> possibleRoutes = new HashSet<Route>();
+		
+		// if subset is empty, warn and don't match to anything
+		if (subset.isEmpty()) {
+			logger.warn("Tried to get possible routes without stop_ids. Returning no matches.");
+			return possibleRoutes;
+		}
+		
 		for (Map.Entry<Route, HashSet<String>> entry : stopIdsByRoute.entrySet()) {
 		    Route route = entry.getKey();
 		    HashSet<String> superset = entry.getValue();
@@ -420,26 +448,6 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 		}
 		
 		return possibleRoutes;
-	}
-
-	/**
-	 * Returns the set of stop IDs for the specified route.
-	 * 
-	 * @param routeId
-	 * @return collection of stop IDs for route
-	 */
-	private HashSet<String> getStopIdsForRoute(String routeId) {
-		// Note: there is a similar private method in DbConfig that could be made public, but we want a HashSet not a Collection
-		HashSet<String> stopIds = new HashSet<String>();
-		
-		List<TripPattern> tripPatternsForRoute = Core.getInstance().getDbConfig().getTripPatternsForRoute(routeId);
-		for (TripPattern tripPattern : tripPatternsForRoute) {
-			for (String stopId : tripPattern.getStopIds()) {
-				stopIds.add(stopId);
-			}
-		}
-		
-		return stopIds;
 	}
 
 	/**
