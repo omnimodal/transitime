@@ -58,7 +58,7 @@
   
   <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
   
-  <title>Transitime Map</title>
+  <title>TheTransitClock Map</title>
 </head>
 
 <body>
@@ -806,33 +806,36 @@ function animateVehicle(vehicleMarker, origLat, origLon, newLat, newLon) {
 /**
  * Should actually read in new vehicle positions and adjust all vehicle icons.
  */
-function updateVehiclesUsingApiData() {
-	// If route not yet configured then simply return. Don't want to read
-	// in all vehicles for agency!
-	// FIXME
-	//if (!getRouteQueryStrParam())
-	//	return;
-	
-	var url = apiUrlPrefix + "/command/vehiclesDetails?" + getRouteQueryStrParam();
+function updateVehiclesUsingApiData() {	
+	var queryParams = {};
+	var url = apiUrlPrefix + "/command/vehiclesDetails";
+
+	var routeQueryStrParam = getRouteQueryStrParam();
+	if (routeQueryStrParam) {
+		queryParams.r = getQueryVariable("r");
+	}
+
 	// If stop specified as query str param to this page pass it to the 
 	// vehicles request such that all but the next 2 predicted vehicles
 	// will be labled as minor ones and can therefore be drawn in UI to not
 	// attract as much attention.
-	if (getQueryVariable("s"))
-		url += "&s=" + getQueryVariable("s") + "&numPreds=2";
-
-	// Handle being able to show unassigned vehicles
-	if (getQueryVariable("showUnassignedVehicles"))
-		url += "&r=";
+	if (getQueryVariable("s")) {
+		queryParams.s = getQueryVariable("s");
+		queryParams.numPreds = 2;
+	}
 
 	// Use ajax() instead of getJSON() so that can set timeout since
 	// will be polling vehicle info every 10 seconds and don't want there
 	// to be many simultaneous requests.
 	$.ajax(url, {
-		  dataType: 'json',
-		  success: vehicleLocationsCallback,
-		  timeout: 6000 // 6 second timeout
-		});
+		data: queryParams,
+		dataType: 'json',
+		success: vehicleLocationsCallback,
+		error: function(jqXHR, textStatus, errorThrown) {
+			console.error(textStatus, errorThrown);
+		},
+		timeout: 6000 // 6 second timeout
+	});
 	
 	// Call this function again at the appropriate time. This can't be done
 	// in vehicleLocationsCallback() because it won't be called if there is
