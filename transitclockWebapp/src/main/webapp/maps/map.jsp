@@ -811,8 +811,9 @@ function updateVehiclesUsingApiData() {
 	var url = apiUrlPrefix + "/command/vehiclesDetails";
 
 	var routeQueryStrParam = getRouteQueryStrParam();
-	if (routeQueryStrParam) {
-		queryParams.r = getQueryVariable("r");
+	// if not null, routeQueryStrParam will be something like "r=123"
+	if (routeQueryStrParam && routeQueryStrParam.split('=').length === 2) {
+		queryParams.r = routeQueryStrParam.split('=')[1];
 	}
 
 	// If stop specified as query str param to this page pass it to the 
