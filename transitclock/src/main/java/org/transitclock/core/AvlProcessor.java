@@ -123,6 +123,11 @@ public class AvlProcessor {
 	          500.0,
 	          "For logging distance between spatial match and actual AVL assignment ");
 
+	private static BooleanConfigValue disableAssignmentGrab =
+			new BooleanConfigValue(
+					"transitclock.core.disableAssignmentGrab", 
+					false, 
+					"Allows disabling assignment grabbing separate from the decision whether to have exclusive block assignments.");		
 	
   private double getMaxMatchDistanceFromAVLRecord() {
     return maxMatchDistanceFromAVLRecord.getValue();
@@ -555,10 +560,22 @@ public class AvlProcessor {
 		// the VehicleDataCache is updated with info from the current
 		// vehicle since this will affect all vehicles assigned to the
 		// block.
+		boolean otherVehiclesInBlock = false;
 		if (bestMatch != null) {
-			unassignOtherVehiclesFromBlock(bestMatch.getBlock(), vehicleId);
-		}
+			otherVehiclesInBlock = unassignOtherVehiclesFromBlock(bestMatch.getBlock(), vehicleId);
 
+			// If assignment grabbing is disabled but would have happened, log this, set the match to null and return
+			if (disableAssignmentGrab.getValue() && 
+					otherVehiclesInBlock && 
+					(bestMatch.getBlock().shouldBeExclusive() || vehicleState.isForSchedBasedPreds())
+					) {
+				logger.info("vehicleId={} matched to {}Id={} but block is exclusive, there are other vehicles in the block, and assignment grabbing is disabled.",
+					vehicleId, assignmentType, assignmentId);
+				vehicleState.setMatch(null);
+				return;
+			}
+		}
+		
 		// If got a valid match then keep track of state
 		BlockAssignmentMethod blockAssignmentMethod = null;
 		boolean predictable = false;
@@ -985,18 +1002,26 @@ public class AvlProcessor {
 	 * @param block
 	 * @param newVehicleId
 	 *            for logging message
+	 * @return true if there are other vehicle(s) assigned to the block
 	 */
-	private void unassignOtherVehiclesFromBlock(Block block, String newVehicleId) {
+	private boolean unassignOtherVehiclesFromBlock(Block block, String newVehicleId) {
 		// Determine vehicles assigned to block
 		Collection<String> vehiclesAssignedToBlock = VehicleDataCache
 				.getInstance().getVehiclesByBlockId(block.getId());
-
+		boolean otherVehiclesInBlock = !vehiclesAssignedToBlock.isEmpty();
+		
 		// For each vehicle assigned to the block unassign it
 		VehicleStateManager stateManager = VehicleStateManager.getInstance();
 		for (String vehicleId : vehiclesAssignedToBlock) {
 			VehicleState vehicleState = stateManager.getVehicleState(vehicleId);
 			if (block.shouldBeExclusive()
 					|| vehicleState.isForSchedBasedPreds()) {
+
+				if (disableAssignmentGrab.getValue()) {
+					logger.info("Would have assigned vehicleId={} to blockId={} and removed assignment from vehicleId={}, but assignment grabbing is disabled.", newVehicleId, block.getId(), vehicleId);
+					continue;
+				}
+				
 				String description = "Assigning vehicleId=" + newVehicleId
 						+ " to blockId=" + block.getId() + " but "
 						+ "vehicleId=" + vehicleId
@@ -1008,6 +1033,8 @@ public class AvlProcessor {
 						description, VehicleEvent.ASSIGNMENT_GRABBED);
 			}
 		}
+		
+		return otherVehiclesInBlock;
 	}
 
 	/**
