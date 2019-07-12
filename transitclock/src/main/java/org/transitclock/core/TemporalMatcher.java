@@ -379,6 +379,7 @@ public class TemporalMatcher {
 		TemporalMatch bestTemporalMatchSoFar = null;
 		for (int matchIdx = 0; matchIdx < spatialMatches.size(); ++matchIdx) {
 			SpatialMatch spatialMatch = spatialMatches.get(matchIdx);
+			boolean isFrequencyBasedTrip = spatialMatch.getTrip().isNoSchedule();
 			logger.debug("Examining spatial match {}", spatialMatch);
 			
 			// There is a complication with vehicles leaving a layover slightly 
@@ -400,17 +401,19 @@ public class TemporalMatcher {
 							vehicleState.getVehicleId(), 
 							previousAvlTime, 
 							previousMatch, spatialMatch);
-			int expectedTravelTimeMsecBackward = 
-					TravelTimes.getInstance().expectedTravelTimeBetweenMatches(
-							vehicleState.getVehicleId(), 
-							previousAvlTime, 
-							spatialMatch, previousMatch);
 			
-			int expectedTravelTimeMsec = Math.min(expectedTravelTimeMsecForward, expectedTravelTimeMsecBackward);
-			
-		
-			//expectedTravelTimeMsec = expectedTravelTimeMsecForward;
-			
+			int expectedTravelTimeMsec = expectedTravelTimeMsecForward;
+			// For frequency based service, check both forward and backward
+			if (isFrequencyBasedTrip) {
+				int expectedTravelTimeMsecBackward = 
+						TravelTimes.getInstance().expectedTravelTimeBetweenMatches(
+								vehicleState.getVehicleId(), 
+								previousAvlTime, 
+								spatialMatch, previousMatch);
+				
+				expectedTravelTimeMsec = Math.min(expectedTravelTimeMsecForward, expectedTravelTimeMsecBackward);
+			}
+
 			// If looking at layover match and the match is different from 
 			// the previous one then it means we expect that the vehicle has
 			// arrived at layover and perhaps gone beyond. For this situation
