@@ -45,7 +45,6 @@ import org.transitclock.db.structs.AvlReport;
 import org.transitclock.db.structs.AvlReport.AssignmentType;
 import org.transitclock.db.structs.Route;
 import org.transitclock.db.structs.Stop;
-import org.transitclock.db.structs.TripPattern;
 import org.transitclock.modules.Module;
 import org.transitclock.utils.IntervalTimer;
 import org.transitclock.utils.Time;
@@ -151,6 +150,7 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 		}
 		
 		Collection<AvlReport> avlReportsReadIn = new ArrayList<AvlReport>();
+		Set<String> uniqueVehicleIds = new HashSet<String>();
 
 		// Get the JSON string containing the AVL data
 		String jsonStr = getJsonString(in);
@@ -160,6 +160,10 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 		
 		for (int i = 0; i < vehicles.length(); i++) {
 			JSONObject vehicle = vehicles.getJSONObject(i);
+			String vehicleId = vehicle.getString("name");
+			if (!uniqueVehicleIds.add(vehicleId)) {
+				logger.warn("Duplicate vehicleId={} in DoubleMap buses feed", vehicleId);
+			}
 			AvlReport avlReport = createAvlReportFromDoubleMapBus(vehicle);
 			if (shouldProcessAvl) {
 				avlReportsReadIn.add(avlReport);
