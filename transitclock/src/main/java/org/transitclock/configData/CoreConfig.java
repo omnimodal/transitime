@@ -38,7 +38,21 @@ import org.transitclock.utils.Time;
  */
 public class CoreConfig {
 	
-	// Database params
+	// Cache params
+	/**
+	 * Whether to enable the historical caches (disabled by default)
+	 * Historical caches are required for certain features such as
+	 * the Kalman prediction generator, hold time generator, etc
+	 * 
+	 * @return
+	 */
+	public static boolean getHistoricalCacheEnabled() {
+		return historicalCacheEnabled.getValue();
+	}
+	private static BooleanConfigValue historicalCacheEnabled =
+		new BooleanConfigValue("transitclock.cache.core.historicalCacheEnabled", false,
+				"Set to true to enable the historical caches.");
+	
 	/**
 	 * How many days data to look back at to fill cache
 	 * @return
@@ -49,6 +63,8 @@ public class CoreConfig {
 	private static IntegerConfigValue daysPopulateHistoricalCache =
 			new IntegerConfigValue("transitclock.cache.core.daysPopulateHistoricalCache", 0,
 					"How many days data to read in to populate historical cache on start up.");
+
+	// Database params
 	/**
 	 * When in playback mode or some other situations don't want to store
 	 * generated data such as arrivals/departures, events, and such to the

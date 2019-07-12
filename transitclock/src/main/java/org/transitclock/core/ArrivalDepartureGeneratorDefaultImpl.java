@@ -340,7 +340,8 @@ public class ArrivalDepartureGeneratorDefaultImpl
 	}
 	private void updateCache(VehicleState vehicleState, ArrivalDeparture arrivalDeparture)
 	{
-								
+		if (!CoreConfig.getHistoricalCacheEnabled())
+			return;
 		
 		if(TripDataHistoryCacheFactory.getInstance()!=null)
 			TripDataHistoryCacheFactory.getInstance().putArrivalDeparture(arrivalDeparture);

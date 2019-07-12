@@ -508,13 +508,15 @@ public class Core {
 			Date endDate=Calendar.getInstance().getTime();
 
 			// populate caches to be used by prediction methods.
-			try {
-				populateCaches();
-				if(TripDataHistoryCacheFactory.getInstance()!=null)
-					TripDataHistoryCacheFactory.getInstance().logCache(logger);
-				
-			} catch (Exception e) {
-				logger.error("Failed to populate cache.", e);
+			if (CoreConfig.getHistoricalCacheEnabled()) {
+				try {
+					populateCaches();
+					if(TripDataHistoryCacheFactory.getInstance()!=null)
+						TripDataHistoryCacheFactory.getInstance().logCache(logger);
+					
+				} catch (Exception e) {
+					logger.error("Failed to populate cache.", e);
+				}
 			}
 
 			// Initialize the core now
