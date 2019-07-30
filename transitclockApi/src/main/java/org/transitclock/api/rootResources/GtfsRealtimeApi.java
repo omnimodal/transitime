@@ -22,6 +22,7 @@ import java.io.OutputStream;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 
 import javax.ws.rs.BeanParam;
 import javax.ws.rs.GET;
@@ -29,8 +30,11 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Request;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.StreamingOutput;
 
 import org.transitclock.api.gtfsRealtime.DataCache;
@@ -62,7 +66,9 @@ public class GtfsRealtimeApi {
 					DEFAULT_MAX_GTFS_RT_CACHE_SECS,
 					"How long to cache GTFS Realtime");
 
-	
+	@Context
+	Request request;
+	  
 	/********************** Member Functions **************************/
 
 	/**
@@ -108,37 +114,43 @@ public class GtfsRealtimeApi {
 		
 		FeedMessage message = cacheEntry.cachedFeedMessage;
 		DateTimeFormatter formatter = DateTimeFormatter.RFC_1123_DATE_TIME.withZone(ZoneId.of("UTC"));
-		String lastModified = formatter.format(Instant.ofEpochMilli(cacheEntry.timeCreated));
+		Date lastModified = new Date(cacheEntry.timeCreated);
+		String lastModifiedString = formatter.format(Instant.ofEpochMilli(cacheEntry.timeCreated));
 
-		// Prepare a StreamingOutput object so can write using it
-		StreamingOutput stream = new StreamingOutput() {
-			public void write(OutputStream outputStream) throws IOException,
-					WebApplicationException {
-				try {
-					// Output in human readable format or in standard binary
-					// format
-					if (humanFormatOutput) {
-						// Output data in human readable format. First, convert
-						// the octal escaped message to regular UTF encoding.
-						String decodedMessage =
-								OctalDecoder.convertOctalEscapedString(message
-										.toString());
-						outputStream.write(decodedMessage.getBytes());
-					} else {
-						// Standard binary output
-						message.writeTo(outputStream);
+		// support conditional GET by checking If-Modified-Since header
+		// will return 304 if not modified
+		ResponseBuilder builder = request.evaluatePreconditions(lastModified);
+		
+		if (builder == null) {
+			// Prepare a StreamingOutput object so can write using it
+			StreamingOutput stream = new StreamingOutput() {
+				public void write(OutputStream outputStream) throws IOException,
+						WebApplicationException {
+					try {
+						// Output in human readable format or in standard binary
+						// format
+						if (humanFormatOutput) {
+							// Output data in human readable format. First, convert
+							// the octal escaped message to regular UTF encoding.
+							String decodedMessage =
+									OctalDecoder.convertOctalEscapedString(message
+											.toString());
+							outputStream.write(decodedMessage.getBytes());
+						} else {
+							// Standard binary output
+							message.writeTo(outputStream);
+						}
+					} catch (Exception e) {
+						throw new WebApplicationException(e);
 					}
-				} catch (Exception e) {
-					throw new WebApplicationException(e);
 				}
-			}
-		};
+			};
+			builder = Response.ok(stream).type(mediaType);
+		}
 
-		// Write out the data using the output stream
-		return Response.ok(stream)
-				.type(mediaType)
-				.header("Last-Modified", lastModified)
-				.build();
+		builder.header("Last-Modified", lastModifiedString);
+		
+		return builder.build();
 	}
 
 	/**
@@ -185,37 +197,43 @@ public class GtfsRealtimeApi {
 		
 		FeedMessage message = cacheEntry.cachedFeedMessage;
 		DateTimeFormatter formatter = DateTimeFormatter.RFC_1123_DATE_TIME.withZone(ZoneId.of("UTC"));
-		String lastModified = formatter.format(Instant.ofEpochMilli(cacheEntry.timeCreated));
-		
-		// Prepare a StreamingOutput object so can write using it
-		StreamingOutput stream = new StreamingOutput() {
-			public void write(OutputStream outputStream) throws IOException,
-					WebApplicationException {
-				try {
-					// Output in human readable format or in standard binary
-					// format
-					if (humanFormatOutput) {
-						// Output data in human readable format. First, convert
-						// the octal escaped message to regular UTF encoding.
-						String decodedMessage =
-								OctalDecoder.convertOctalEscapedString(message
-										.toString());
-						outputStream.write(decodedMessage.getBytes());
-					} else {
-						// Standard binary output
-						message.writeTo(outputStream);
-					}
-				} catch (Exception e) {
-					throw new WebApplicationException(e);
-				}
-			}
-		};
+		Date lastModified = new Date(cacheEntry.timeCreated);
+		String lastModifiedString = formatter.format(Instant.ofEpochMilli(cacheEntry.timeCreated));
 
-		// Write out the data using the output stream
-		return Response.ok(stream)
-				.type(mediaType)
-				.header("Last-Modified", lastModified)
-				.build();
+		// support conditional GET by checking If-Modified-Since header
+		// will return 304 if not modified
+		ResponseBuilder builder = request.evaluatePreconditions(lastModified);
+		
+		if (builder == null) {
+			// Prepare a StreamingOutput object so can write using it
+			StreamingOutput stream = new StreamingOutput() {
+				public void write(OutputStream outputStream) throws IOException,
+						WebApplicationException {
+					try {
+						// Output in human readable format or in standard binary
+						// format
+						if (humanFormatOutput) {
+							// Output data in human readable format. First, convert
+							// the octal escaped message to regular UTF encoding.
+							String decodedMessage =
+									OctalDecoder.convertOctalEscapedString(message
+											.toString());
+							outputStream.write(decodedMessage.getBytes());
+						} else {
+							// Standard binary output
+							message.writeTo(outputStream);
+						}
+					} catch (Exception e) {
+						throw new WebApplicationException(e);
+					}
+				}
+			};
+			builder = Response.ok(stream).type(mediaType);
+		}
+
+		builder.header("Last-Modified", lastModifiedString);
+		
+		return builder.build();
 	}
 
 }
