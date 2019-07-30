@@ -34,31 +34,42 @@ import com.google.transit.realtime.GtfsRealtime.FeedMessage;
  */
 public class DataCache {
 
-    private Map<String, CacheEntry> cacheMap = new HashMap<String, CacheEntry>();
+	private Map<String, CacheEntry> cacheMap = new HashMap<String, CacheEntry>();
 
-    /********************** Member Functions **************************/
+	/********************** Member Functions **************************/
 
-    private static class CacheEntry {
-	private long timeCreated;
-	private FeedMessage cachedFeedMessage;
-    }
-
-    public FeedMessage get(String agencyId, int maxCacheSeconds) {
-	CacheEntry cacheEntry = cacheMap.get(agencyId);
-	if (cacheEntry == null)
-	    return null;
-	if (cacheEntry.timeCreated < System.currentTimeMillis() - maxCacheSeconds * Time.MS_PER_SEC) {
-	    cacheMap.remove(agencyId);
-	    return null;
+	public static class CacheEntry {
+		public long timeCreated;
+		public FeedMessage cachedFeedMessage;
 	}
-	return cacheEntry.cachedFeedMessage;
-    }
-    
-    public void put(String agencyId, FeedMessage feedMessage) {
-	CacheEntry cacheEntry = new CacheEntry();
-	cacheEntry.timeCreated = System.currentTimeMillis();
-	cacheEntry.cachedFeedMessage = feedMessage;
-	cacheMap.put(agencyId, cacheEntry);
-    }
+
+	public FeedMessage get(String agencyId, int maxCacheSeconds) {
+		CacheEntry cacheEntry = cacheMap.get(agencyId);
+		if (cacheEntry == null)
+			return null;
+		if (cacheEntry.timeCreated < System.currentTimeMillis() - maxCacheSeconds * Time.MS_PER_SEC) {
+			cacheMap.remove(agencyId);
+			return null;
+		}
+		return cacheEntry.cachedFeedMessage;
+	}
+	
+	public CacheEntry getCacheEntry(String agencyId, int maxCacheSeconds) {
+		CacheEntry cacheEntry = cacheMap.get(agencyId);
+		if (cacheEntry == null)
+			return null;
+		if (cacheEntry.timeCreated < System.currentTimeMillis() - maxCacheSeconds * Time.MS_PER_SEC) {
+			cacheMap.remove(agencyId);
+			return null;
+		}
+		return cacheEntry;
+	}
+	
+	public void put(String agencyId, FeedMessage feedMessage) {
+		CacheEntry cacheEntry = new CacheEntry();
+		cacheEntry.timeCreated = System.currentTimeMillis();
+		cacheEntry.cachedFeedMessage = feedMessage;
+		cacheMap.put(agencyId, cacheEntry);
+	}
 }
 

@@ -19,6 +19,9 @@ package org.transitclock.api.rootResources;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 import javax.ws.rs.BeanParam;
 import javax.ws.rs.GET;
@@ -30,6 +33,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 
+import org.transitclock.api.gtfsRealtime.DataCache;
 import org.transitclock.api.gtfsRealtime.GtfsRtTripFeed;
 import org.transitclock.api.gtfsRealtime.GtfsRtVehicleFeed;
 import org.transitclock.api.utils.StandardParameters;
@@ -40,8 +44,6 @@ import com.google.transit.realtime.GtfsRealtime.FeedMessage;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.servers.Server;
-import io.swagger.v3.oas.annotations.servers.Servers;
 
 /**
  * Contains API commands for the GTFS-realtime API.
@@ -97,17 +99,22 @@ public class GtfsRealtimeApi {
 		String mediaType =
 				humanFormatOutput ? MediaType.TEXT_PLAIN
 						: MediaType.APPLICATION_OCTET_STREAM;
+		
+		// Get the cached feed and timestamp for the response
+		DataCache.CacheEntry cacheEntry =
+				GtfsRtVehicleFeed.getCacheEntry(
+						stdParameters.getAgencyId(),
+						gtfsRtCacheSeconds.getValue());
+		
+		FeedMessage message = cacheEntry.cachedFeedMessage;
+		DateTimeFormatter formatter = DateTimeFormatter.RFC_1123_DATE_TIME.withZone(ZoneId.of("UTC"));
+		String lastModified = formatter.format(Instant.ofEpochMilli(cacheEntry.timeCreated));
 
 		// Prepare a StreamingOutput object so can write using it
 		StreamingOutput stream = new StreamingOutput() {
 			public void write(OutputStream outputStream) throws IOException,
 					WebApplicationException {
 				try {
-					FeedMessage message =
-							GtfsRtVehicleFeed.getPossiblyCachedMessage(
-									stdParameters.getAgencyId(),
-									gtfsRtCacheSeconds.getValue());
-
 					// Output in human readable format or in standard binary
 					// format
 					if (humanFormatOutput) {
@@ -128,7 +135,10 @@ public class GtfsRealtimeApi {
 		};
 
 		// Write out the data using the output stream
-		return Response.ok(stream).type(mediaType).build();
+		return Response.ok(stream)
+				.type(mediaType)
+				.header("Last-Modified", lastModified)
+				.build();
 	}
 
 	/**
@@ -167,16 +177,21 @@ public class GtfsRealtimeApi {
 				humanFormatOutput ? MediaType.TEXT_PLAIN
 						: MediaType.APPLICATION_OCTET_STREAM;
 
+		// Get the cached feed and timestamp for the response
+		DataCache.CacheEntry cacheEntry =
+				GtfsRtTripFeed.getCacheEntry(
+						stdParameters.getAgencyId(),
+						gtfsRtCacheSeconds.getValue());
+		
+		FeedMessage message = cacheEntry.cachedFeedMessage;
+		DateTimeFormatter formatter = DateTimeFormatter.RFC_1123_DATE_TIME.withZone(ZoneId.of("UTC"));
+		String lastModified = formatter.format(Instant.ofEpochMilli(cacheEntry.timeCreated));
+		
 		// Prepare a StreamingOutput object so can write using it
 		StreamingOutput stream = new StreamingOutput() {
 			public void write(OutputStream outputStream) throws IOException,
 					WebApplicationException {
 				try {
-					FeedMessage message =
-							GtfsRtTripFeed.getPossiblyCachedMessage(
-									stdParameters.getAgencyId(),
-									gtfsRtCacheSeconds.getValue());
-
 					// Output in human readable format or in standard binary
 					// format
 					if (humanFormatOutput) {
@@ -197,7 +212,10 @@ public class GtfsRealtimeApi {
 		};
 
 		// Write out the data using the output stream
-		return Response.ok(stream).type(mediaType).build();
+		return Response.ok(stream)
+				.type(mediaType)
+				.header("Last-Modified", lastModified)
+				.build();
 	}
 
 }

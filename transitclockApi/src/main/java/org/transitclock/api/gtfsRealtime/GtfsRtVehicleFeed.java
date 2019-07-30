@@ -25,6 +25,7 @@ import java.util.Date;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.transitclock.api.gtfsRealtime.DataCache;
 import org.transitclock.api.utils.AgencyTimezoneCache;
 import org.transitclock.ipc.clients.VehiclesInterfaceFactory;
 import org.transitclock.ipc.data.IpcVehicleGtfsRealtime;
@@ -235,7 +236,7 @@ public class GtfsRtVehicleFeed {
 		return createMessage(vehicles);
 	}
 
-	// For getPossiblyCachedMessage()
+	// For getCacheEntry()
 	private static final DataCache vehicleFeedDataCache = new DataCache();
 
 	/**
@@ -245,24 +246,26 @@ public class GtfsRtVehicleFeed {
 	 * @param cacheTime
 	 * @return
 	 */
-	public static FeedMessage getPossiblyCachedMessage(String agencyId,
+	public static DataCache.CacheEntry getCacheEntry(String agencyId,
 			int cacheTime) {
-		FeedMessage feedMessage = vehicleFeedDataCache.get(agencyId, cacheTime);
-		if (feedMessage != null)
-			return feedMessage;
+		DataCache.CacheEntry cacheEntry = vehicleFeedDataCache.getCacheEntry(agencyId, cacheTime);
+		if (cacheEntry != null)
+			return cacheEntry;
 		
 		synchronized(vehicleFeedDataCache) {
 		
 			// Cache may have been filled while waiting.
-			feedMessage = vehicleFeedDataCache.get(agencyId, cacheTime);
-			if (feedMessage != null)
-				return feedMessage;
+			cacheEntry = vehicleFeedDataCache.getCacheEntry(agencyId, cacheTime);
+			if (cacheEntry != null)
+				return cacheEntry;
 		
+			// No cache entry; create and cache the feed then re-fetch
 			GtfsRtVehicleFeed feed = new GtfsRtVehicleFeed(agencyId);
-			feedMessage = feed.createMessage();
+			FeedMessage feedMessage = feed.createMessage();
 			vehicleFeedDataCache.put(agencyId, feedMessage);
+			cacheEntry = vehicleFeedDataCache.getCacheEntry(agencyId,  cacheTime);
 		}
 		
-		return feedMessage;
+		return cacheEntry;
 	}
 }

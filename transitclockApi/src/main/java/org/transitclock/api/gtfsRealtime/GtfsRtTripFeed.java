@@ -370,34 +370,36 @@ public class GtfsRtTripFeed {
 		return createMessage(predsByTrip);
 	}
 
-	// For getPossiblyCachedMessage()
+	// For getCacheEntry()
 	private static final DataCache tripFeedDataCache = new DataCache();
 	
 	/**
-	 * For caching Vehicle Positions feed messages.
+	 * For caching Trip Updates feed messages.
 	 * 
 	 * @param agencyId
 	 * @param cacheTime
 	 * @return
 	 */
-	public static FeedMessage getPossiblyCachedMessage(String agencyId, int cacheTime) {
-	    FeedMessage feedMessage = tripFeedDataCache.get(agencyId, cacheTime);
-	    if (feedMessage != null)
-	    	return feedMessage;
-	    
-	    synchronized(tripFeedDataCache) {
-	    	
-	    	// Cache may have been filled while waiting.
-	    	feedMessage = tripFeedDataCache.get(agencyId, cacheTime);
-	    	if (feedMessage != null)
-	    		return feedMessage;
-	    	
-	    	GtfsRtTripFeed feed = new GtfsRtTripFeed(agencyId);
-		    feedMessage = feed.createMessage();
-		    tripFeedDataCache.put(agencyId, feedMessage);
-	    }
-	    
-	    return feedMessage;
+	public static DataCache.CacheEntry getCacheEntry(String agencyId, int cacheTime) {
+		DataCache.CacheEntry cacheEntry = tripFeedDataCache.getCacheEntry(agencyId, cacheTime);
+		if (cacheEntry != null)
+			return cacheEntry;
+		
+		synchronized(tripFeedDataCache) {
+		
+			// Cache may have been filled while waiting.
+			cacheEntry = tripFeedDataCache.getCacheEntry(agencyId, cacheTime);
+			if (cacheEntry != null)
+				return cacheEntry;
+		
+			// No cache entry; create and cache the feed then re-fetch
+			GtfsRtTripFeed feed = new GtfsRtTripFeed(agencyId);
+			FeedMessage feedMessage = feed.createMessage();
+			tripFeedDataCache.put(agencyId, feedMessage);
+			cacheEntry = tripFeedDataCache.getCacheEntry(agencyId,  cacheTime);
+		}
+		
+		return cacheEntry;
 	}
 
 }
