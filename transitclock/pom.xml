@@ -139,9 +139,9 @@
 
 		<!-- For GTFS-realtime feed -->
 		<dependency>
-			<groupId>com.google.transit</groupId>
+			<groupId>io.mobilitydata.transit</groupId>
 			<artifactId>gtfs-realtime-bindings</artifactId>
-			<version>0.0.4</version>
+			<version>0.0.5</version>
 		</dependency>
 
 		<!-- For more easily handling command line options -->
