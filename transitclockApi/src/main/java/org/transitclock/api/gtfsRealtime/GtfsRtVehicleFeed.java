@@ -183,7 +183,7 @@ public class GtfsRtVehicleFeed {
 		FeedHeader.Builder feedheader =
 				FeedHeader
 						.newBuilder()
-						.setGtfsRealtimeVersion("1.0")
+						.setGtfsRealtimeVersion("2.0")
 						.setIncrementality(Incrementality.FULL_DATASET)
 						.setTimestamp(
 								System.currentTimeMillis() / Time.MS_PER_SEC);
