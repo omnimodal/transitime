@@ -13,7 +13,7 @@
     String endTime = request.getParameter("endTime");
 
     String routeIds[] = request.getParameterValues("r");
-    // source can be "" (for all), "Transitime", or "Other";
+    // source can be "" (for all), "TransitClock", or "Other";
 	String source = request.getParameter("source");
 	
 	String predictionType = request.getParameter("predictionType");

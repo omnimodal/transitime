@@ -193,7 +193,7 @@ public class PredAccuracyRangeQuery extends PredictionAccuracyQuery {
 	 *            all routes or an array of route IDs.
 	 * @param predSource
 	 *            The source of the predictions. Can be null or "" (for all),
-	 *            "Transitime", or "Other"
+	 *            "TransitClock", or "Other"
 	 * @param predType
 	 *            Whether predictions are affected by wait stop. Can be "" (for
 	 *            all), "AffectedByWaitStop", or "NotAffectedByWaitStop".
@@ -243,7 +243,7 @@ public class PredAccuracyRangeQuery extends PredictionAccuracyQuery {
 		String numDays = "1";
 		String routeIds[] = { "CR-Fairmount" };
 
-		String source = "Transitime";
+		String source = "TransitClock";
 			
 
 		String dbType = "postgresql";// "mysql";

@@ -52,7 +52,7 @@ public class RoutePerformanceQuery {
   public static final String PREDICTION_TYPE_AFFECTED = "AffectedByWaitStop";
   public static final String PREDICTION_TYPE_NOT_AFFECTED = "NotAffectedByWaitStop";
   
-  private static final String TRANSITIME_PREDICTION_SOURCE = "Transitime";
+  private static final String TRANSITCLOCK_PREDICTION_SOURCE = "TransitClock";
   
   public List<Object[]> query(String agencyId, Date startDate, int numDays, double allowableEarlyMin, double allowableLateMin, String predictionType, String predictionSource) {
     
@@ -90,10 +90,10 @@ public class RoutePerformanceQuery {
           criteria.add(Restrictions.eq("affectedByWaitStop", false));
       
       if (predictionSource != null && !StringUtils.isEmpty(predictionSource)) {
-    	  if (predictionSource.equals(TRANSITIME_PREDICTION_SOURCE))
-    		  criteria.add(Restrictions.eq("predictionSource", TRANSITIME_PREDICTION_SOURCE));
+    	  if (predictionSource.equals(TRANSITCLOCK_PREDICTION_SOURCE))
+    		  criteria.add(Restrictions.eq("predictionSource", TRANSITCLOCK_PREDICTION_SOURCE));
     	  else
-    		  criteria.add(Restrictions.ne("predictionSource", TRANSITIME_PREDICTION_SOURCE));
+    		  criteria.add(Restrictions.ne("predictionSource", TRANSITCLOCK_PREDICTION_SOURCE));
       }
       
       criteria.addOrder(Order.desc("performance"));

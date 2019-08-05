@@ -213,7 +213,7 @@ abstract public class PredictionAccuracyQuery {
 	 *            Array of IDs of routes to get data for
 	 * @param predSource
 	 *            The source of the predictions. Can be null or "" (for all),
-	 *            "Transitime", or "Other"
+	 *            "TransitClock", or "Other"
 	 * @param predType
 	 *            Whether predictions are affected by wait stop. Can be "" (for
 	 *            all), "AffectedByWaitStop", or "NotAffectedByWaitStop".
@@ -272,12 +272,12 @@ abstract public class PredictionAccuracyQuery {
 		// predictions for all sources
 		String sourceSql = "";
 		if (predSource != null && !predSource.isEmpty()) {
-			if (predSource.equals("Transitime")) {
-				// Only "Transitime" predictions
-				sourceSql = " AND predictionSource='Transitime'";
+			if (predSource.equals("TransitClock")) {
+				// Only "TransitClock" predictions
+				sourceSql = " AND predictionSource='TransitClock'";
 			} else {
-				// Anything but "Transitime"
-				sourceSql = " AND predictionSource<>'Transitime'";
+				// Anything but "TransitClock"
+				sourceSql = " AND predictionSource<>'TransitClock'";
 			}
 		}
 

@@ -323,7 +323,7 @@ public class PredAccuracyIntervalQuery extends PredictionAccuracyQuery {
 	 *            all routes or an array of route IDs.
 	 * @param predSource
 	 *            The source of the predictions. Can be null or "" (for all),
-	 *            "Transitime", or "Other"
+	 *            "TransitClock", or "Other"
 	 * @param predType
 	 *            Whether predictions are affected by wait stop. Can be "" (for
 	 *            all), "AffectedByWaitStop", or "NotAffectedByWaitStop".
@@ -377,7 +377,7 @@ public class PredAccuracyIntervalQuery extends PredictionAccuracyQuery {
 		String beginTime = null;
 		String endTime = null;
 		String routeIds[] = { "CR-Providence" };
-		String source = "Transitime";
+		String source = "TransitClock";
 
 		String agencyId = "mbta";
 

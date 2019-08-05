@@ -39,6 +39,7 @@ import org.transitclock.config.BooleanConfigValue;
 import org.transitclock.config.IntegerConfigValue;
 import org.transitclock.db.hibernate.HibernateUtils;
 import org.transitclock.db.structs.ArrivalDeparture;
+import org.transitclock.db.webstructs.WebAgency;
 import org.transitclock.utils.Time;
 
 public class ScheduleAdherenceController {
@@ -73,15 +74,8 @@ public class ScheduleAdherenceController {
 	         Boolean.FALSE,
 	         "use the allowable early/late report params or use configured schedule limits");
 	 
-	private static final String ADHERENCE_SQL = "(time - scheduledTime) AS scheduleAdherence";
-	private static final Projection ADHERENCE_PROJECTION = Projections.sqlProjection(
-			ADHERENCE_SQL, new String[] { "scheduleAdherence" },
-			new Type[] { DoubleType.INSTANCE });
-	private static final Projection AVG_ADHERENCE_PROJECTION = Projections.sqlProjection(
-			"avg" + ADHERENCE_SQL, new String[] { "scheduleAdherence" },
-			new Type[] { DoubleType.INSTANCE });
-	
-	public static List<Object> stopScheduleAdherence(Date startDate,
+	public static List<Object> stopScheduleAdherence(String agencyId,
+			Date startDate,
 			int numDays,
 			String startTime,
 			String endTime,
@@ -89,10 +83,11 @@ public class ScheduleAdherenceController {
 			boolean byStop,
 			String datatype) {
 
-		return groupScheduleAdherence(startDate, numDays, startTime, endTime, "stopId", stopIds, byStop, datatype);
+		return groupScheduleAdherence(agencyId, startDate, numDays, startTime, endTime, "stopId", stopIds, byStop, datatype);
 	}
 	
-	public static List<Object> routeScheduleAdherence(Date startDate,
+	public static List<Object> routeScheduleAdherence(String agencyId,
+			Date startDate,
 			int numDays,
 			String startTime,
 			String endTime,
@@ -100,24 +95,25 @@ public class ScheduleAdherenceController {
 			boolean byRoute,
 			String datatype) {
 
-		return groupScheduleAdherence(startDate, numDays, startTime, endTime, "routeId", routeIds, byRoute, datatype);
+		return groupScheduleAdherence(agencyId, startDate, numDays, startTime, endTime, "routeId", routeIds, byRoute, datatype);
 	}
 	
-	public static List<Integer> routeScheduleAdherenceSummary(Date startDate,
+	public static List<Integer> routeScheduleAdherenceSummary(String agencyId,
+			Date startDate,
 			int numDays,
 			String startTime,
 			String endTime,
 			Double earlyLimitParam,
 			Double lateLimitParam,
 			List<String> routeIds) {
-				
+
 		int count = 0;
 		int early = 0;
 		int late = 0;
 		int ontime = 0;
 		Double earlyLimit = (usePredictionLimits.getValue() ? earlyLimitParam : (double)scheduleEarlySeconds.getValue());
 		Double lateLimit = (usePredictionLimits.getValue() ? lateLimitParam : (double)scheduleLateSeconds.getValue());
-		List<Object> results = routeScheduleAdherence(startDate, numDays, startTime, endTime, routeIds, false, null);
+		List<Object> results = routeScheduleAdherence(agencyId, startDate, numDays, startTime, endTime, routeIds, false, null);
 
 		for (Object o : results) {
 			count++;
@@ -142,8 +138,11 @@ public class ScheduleAdherenceController {
 		return Arrays.asList(summary);
 	}
 	
-	private static List<Object> groupScheduleAdherence(Date startDate, int numDays, String startTime, String endTime,
+	private static List<Object> groupScheduleAdherence(String agencyId, Date startDate, int numDays, String startTime, String endTime,
 			String groupName, List<String> idsOrEmpty, boolean byGroup, String datatype) {
+
+		WebAgency agency = WebAgency.getCachedWebAgency(agencyId);
+		boolean isMysql = "mysql".equals(agency.getDbType());
 
 		// filter ids which may be empty.
 		List<String> ids = new ArrayList<String>();
@@ -163,6 +162,19 @@ public class ScheduleAdherenceController {
 			proj.add(Projections.property("routeId"), "routeId").add(Projections.property("stopId"), "stopId")
 					.add(Projections.property("tripId"), "tripId");
 
+		String ADHERENCE_SQL;
+		if (isMysql) {
+			ADHERENCE_SQL = "(time - scheduledTime) AS scheduleAdherence";
+		} else {
+			ADHERENCE_SQL = "EXTRACT(EPOCH FROM time) - EXTRACT(EPOCH FROM scheduledTime) AS scheduleAdherence";
+		}
+		Projection ADHERENCE_PROJECTION = Projections.sqlProjection(
+				ADHERENCE_SQL, new String[] { "scheduleAdherence" },
+				new Type[] { DoubleType.INSTANCE });
+		Projection AVG_ADHERENCE_PROJECTION = Projections.sqlProjection(
+				"avg" + ADHERENCE_SQL, new String[] { "scheduleAdherence" },
+				new Type[] { DoubleType.INSTANCE });
+
 		proj.add(byGroup ? AVG_ADHERENCE_PROJECTION : ADHERENCE_PROJECTION, "scheduleAdherence");
 
 		DetachedCriteria criteria = DetachedCriteria.forClass(ArrivalDeparture.class)
@@ -173,7 +185,12 @@ public class ScheduleAdherenceController {
 		else if ("departure".equals(datatype))
 			criteria.add(Restrictions.eq("isArrival", false));
 		
-		String sql = "time({alias}.time) between ? and ?";
+		String sql;
+		if (isMysql) {
+			sql = "time({alias}.time) between ? and ?";
+		} else {
+			sql = "{alias}.time::time::varchar between ? and ?";
+		}
 		String[] values = { startTime, endTime };
 		Type[] types = { StringType.INSTANCE, StringType.INSTANCE };
 		criteria.add(Restrictions.sqlRestriction(sql, values, types));

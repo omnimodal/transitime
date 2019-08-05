@@ -11,6 +11,7 @@
 <%@ page contentType="application/json" %>
 <%
 // todo this code should be in a struts action
+String agencyId = request.getParameter("a");
 String startDateStr = request.getParameter("beginDate");
 String numDaysStr = request.getParameter("numDays");
 String startTime = request.getParameter("beginTime");
@@ -42,10 +43,9 @@ String routeIdList = request.getParameter("r");
 List<String> routeIds = routeIdList == null ? null : Arrays.asList(routeIdList.split(","));
 
 
-SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-Date startDate = dateFormat.parse(startDateStr);
+Date startDate = org.transitclock.utils.Time.parseDate(startDateStr);
 
-List<Integer> results = ScheduleAdherenceController.routeScheduleAdherenceSummary(startDate,
+List<Integer> results = ScheduleAdherenceController.routeScheduleAdherenceSummary(agencyId, startDate,
 		Integer.parseInt(numDaysStr), startTime, endTime, earlyLimit, lateLimit, routeIds);
 
 JSONArray json = new JSONArray(results);

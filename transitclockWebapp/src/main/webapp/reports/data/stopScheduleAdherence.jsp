@@ -1,4 +1,5 @@
 <%@ page import="org.transitclock.reports.ScheduleAdherenceController" %>
+<%@ page import="org.transitclock.utils.Time" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.Date" %>
 <%@ page import="java.util.Arrays" %>
@@ -7,6 +8,7 @@
 <%@ page contentType="application/json" %>
 <%
 
+String agencyId = request.getParameter("a");
 String startDateStr = request.getParameter("beginDate");
 String numDaysStr = request.getParameter("numDays");
 String startTime = request.getParameter("beginTime");
@@ -28,11 +30,10 @@ String stopIdList = request.getParameter("stopIds");
 List<String> stopIds = stopIdList == null ? null : Arrays.asList(stopIdList.split(","));
 
 
-SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-Date startDate = dateFormat.parse(startDateStr);
+Date startDate = org.transitclock.utils.Time.parseDate(startDateStr);
 int numDays  = Integer.parseInt(numDaysStr);
 
-List<Object> results = ScheduleAdherenceController.stopScheduleAdherence(startDate,
+List<Object> results = ScheduleAdherenceController.stopScheduleAdherence(agencyId, startDate,
 		numDays, startTime, endTime, stopIds, byStop, datatype);
 
 JSONArray json = new JSONArray(results);

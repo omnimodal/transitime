@@ -1,4 +1,5 @@
 <%@ page import="org.transitclock.reports.RoutePerformanceQuery" %>
+<%@ page import="org.transitclock.utils.Time" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.Date" %>
 <%@ page import="java.text.SimpleDateFormat" %>
@@ -27,8 +28,7 @@ if (StringUtils.isEmpty(endTimeStr))
 else
   endTimeStr += ":00";
 
-SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-Date beginDate = dateFormat.parse(beginDateStr + " " + beginTimeStr);
+Date beginDate = org.transitclock.utils.Time.parseDate(beginDateStr + " " + beginTimeStr);
 int numDays = Integer.parseInt(numDaysStr);
 
 List<Object[]> results = new RoutePerformanceQuery().query(agency, beginDate, numDays, allowableEarly, allowableLate, predictionType, predictionSource);
