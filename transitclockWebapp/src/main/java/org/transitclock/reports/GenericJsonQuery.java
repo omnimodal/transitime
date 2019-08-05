@@ -30,7 +30,7 @@ public class GenericJsonQuery extends GenericQuery {
 
 	private static final Logger logger = LoggerFactory
 			.getLogger(GenericJsonQuery.class);
-	private static JSONArray data = new JSONArray();
+	private JSONArray data = new JSONArray();
 	private List<String> columnNames = new ArrayList<String>();
 	
 	/**
@@ -76,7 +76,7 @@ public class GenericJsonQuery extends GenericQuery {
 			
 			query.doQuery(sql, parameters);
 
-			return new JSONObject().put("data", data).toString();
+			return new JSONObject().put("data", query.data).toString();
 		} catch (SQLException e) {
 			return e.getMessage();
 		}
@@ -97,7 +97,7 @@ public class GenericJsonQuery extends GenericQuery {
 
 			query.doQuery(sql);
 
-			return new JSONObject().put("data", data).toString();
+			return new JSONObject().put("data", query.data).toString();
 		} catch (SQLException e) {
 			return e.getMessage();
 		}
