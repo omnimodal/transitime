@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.transitclock.api.data.IpcPredictionComparator;
 import org.transitclock.api.utils.AgencyTimezoneCache;
+import org.transitclock.applications.Core;
 import org.transitclock.config.BooleanConfigValue;
 import org.transitclock.config.IntegerConfigValue;
 import org.transitclock.core.holdingmethod.PredictionTimeComparator;
@@ -324,6 +325,11 @@ public class GtfsRtTripFeed {
 		try {
 			allPredictionsByStop = PredictionsInterfaceFactory.get(agencyId)
 					.getAllPredictions(PREDICTION_MAX_FUTURE_SECS);
+			// Remove old predictions so that they are not provided through the 
+			// API and such
+			for (IpcPredictionsForRouteStopDest preds : allPredictionsByStop) {
+				preds.removeExpiredPredictions(Core.getInstance().getSystemTime());
+			}
 		} catch (RemoteException e) {
 			logger.error("Exception when getting vehicles from RMI", e);
 			return null;
