@@ -464,23 +464,8 @@ public class IpcPredictionsForRouteStopDest implements Serializable {
 			// Remove predictions that are expired. It makes sense to do this 
 			// here when adding predictions since only need to take out 
 			// predictions if more are being added.
-			VehicleStateManager vehicleStateManager = VehicleStateManager.getInstance();
 			if (currentPrediction.getPredictionTime() < currentTime) {
-				// TODO This is a change for VIA. This needs to be in HoldingTimeGenerator. 
-				VehicleState vehicleState = vehicleStateManager.getVehicleState(currentPrediction.getVehicleId());
-				if(vehicleState!=null)
-				{
-					
-					if((currentPrediction.getStopId().equals("20097") || currentPrediction.getStopId().equals("93296")) && vehicleState.getHoldingTime() == null )
-					{
-						// do nothing
-					}
-					else
-					{
-						iterator.remove();
-					}
-				}
-								
+				iterator.remove();								
 			} else {
 				// The subsequent predictions are later so if this one is
 				// into the future then the remaining ones are too. 
