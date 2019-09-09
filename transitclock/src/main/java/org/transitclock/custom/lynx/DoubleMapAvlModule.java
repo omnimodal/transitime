@@ -116,15 +116,23 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 
 		// Check that rate limits are not exceeded per DoubleMap API documentation
 		if (getSecondsBetweenRoutesPolling() < 300) {
-			throw new IllegalArgumentException("Polling rate too frequent; transitclock.avl.doubleMapRoutesPollingRateSecs must be 5 minutes (300 seconds) or greater");
+			throw new IllegalArgumentException("Polling rate too frequent; transitclock.avl.doubleMapRoutesPollingRateSecs must be 5 minutes (300 seconds) or greater per DoubleMap API documentation");
 		}
-		if (AvlConfig.getSecondsBetweenAvlFeedPolling() < 10) {
-			throw new IllegalArgumentException("Polling rate too frequent; transitclock.avl.feedPollingRateSecs must be 10 seconds or greater");
+		if (AvlConfig.getSecondsBetweenAvlFeedPolling() < 3) {
+			throw new IllegalArgumentException("Polling rate too frequent; transitclock.avl.feedPollingRateSecs must be 3 seconds or greater per DoubleMap API documentation");
 		}
 		
 		// Read in and process the stop and routes info so we can map to GTFS IDs.
-		readDoubleMapStopData();
-		readDoubleMapRouteData();
+		if (readDoubleMapStopData()) {
+			logger.info("Successfully read and processed DoubleMap stop data");
+		} else {
+			logger.error("Unable to read and process DoubleMap stop data. Will try again in ~ {} seconds.", AvlConfig.getSecondsBetweenAvlFeedPolling());
+		}
+		if (readDoubleMapRouteData()) {
+			logger.info("Successfully read and processed DoubleMap route data");
+		} else {
+			logger.error("Unable to read and process DoubleMap route data. Will try again in ~ {} seconds.", getSecondsBetweenRoutesPolling());
+		}
 	}
 
 	/**
@@ -136,20 +144,44 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 	}
 
 	/**
-	 * Called when AVL data is read from URL. Processes the JSON data and calls
-	 * processAvlReport() for each AVL report. Also gets and processes routes data periodically.
+	 * Called when AVL data is read from URL. Processes the JSON data and calls processAvlReport() for each AVL report.
+	 * Also gets and processes stops/routes data periodically.
 	 * @param in
 	 * @return Collection of AVL reports
 	 */
 	@Override
 	protected Collection<AvlReport> processData(InputStream in) throws JSONException, IOException, MalformedURLException {
-		// Process routes data if enough time has passed
-		if (routesFeedPollingTimer.elapsedMsec() >= getSecondsBetweenRoutesPolling() * Time.MS_PER_SEC) {
-			readDoubleMapRouteData();
-			routesFeedPollingTimer.resetTimer();
+		Collection<AvlReport> avlReportsReadIn = new ArrayList<AvlReport>();
+
+		// If stopLookup is empty, it means processing the stops data on startup didn't work.
+		// Try to process stops data again and if still unsuccessful, return 0 AVL reports,
+		// since there's not enough data to continue processing the routes and buses
+		if (stopLookup.isEmpty()) {
+			if (readDoubleMapStopData()) {
+				logger.info("Successfully read and processed DoubleMap stop data");
+			} else {
+				logger.error("Unable to read and process DoubleMap stop data. Will try again in ~ {} seconds.", AvlConfig.getSecondsBetweenAvlFeedPolling());
+				return avlReportsReadIn;
+			}
 		}
 		
-		Collection<AvlReport> avlReportsReadIn = new ArrayList<AvlReport>();
+		// Process routes data if enough time has passed
+		if (routesFeedPollingTimer.elapsedMsec() >= getSecondsBetweenRoutesPolling() * Time.MS_PER_SEC) {
+			// reset timer if processing was successful; otherwise leave it and it will retry the next time through
+			if (readDoubleMapRouteData()) {
+				logger.info("Successfully read and processed DoubleMap route data. Will read again in ~ {} seconds.", getSecondsBetweenRoutesPolling());
+				routesFeedPollingTimer.resetTimer();
+			} else {
+				logger.error("Unable to read and process DoubleMap route data. Will try again in ~ {} seconds.", AvlConfig.getSecondsBetweenAvlFeedPolling());
+			}
+		}
+		
+		// If routeLookup is empty, don't process AVL reports, as there won't be enough data for matching
+		if (routeLookup.isEmpty()) {
+			logger.warn("Not processing DoubleMap buses feed because routeLookup is empty");
+			return avlReportsReadIn;
+		}
+		
 		Set<String> uniqueVehicleIds = new HashSet<String>();
 
 		// Get the JSON string containing the AVL data
@@ -171,7 +203,7 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 		}
 
 		// Return all the AVL reports read in
-		return avlReportsReadIn;			
+		return avlReportsReadIn;
 	}
 	
 	/**
@@ -212,9 +244,10 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 	
 	/**
 	 * Gets, reads and processes DoubleMap stops feed.
-	 * This is essential for the module to be functional, so exceptions aren't caught
+	 * Catch and log exceptions that may be transient, as we'll be trying again periodically
+	 * @return true if successful
 	 */
-	protected void readDoubleMapStopData() throws JSONException, IOException, MalformedURLException {
+	protected boolean readDoubleMapStopData() throws MalformedURLException {
 		IntervalTimer timer = new IntervalTimer();
 		InputStream in = null;
 		
@@ -229,17 +262,30 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 
 			timer.resetTimer();
 
-			processStopData(in);
+			String jsonStr = getJsonString(in);
+			JSONArray stops = new JSONArray(jsonStr);
+			HashMap<Integer, String> newStopLookup = processStopData(stops);
+			stopLookup.putAll(newStopLookup);
+			
 			logger.debug("Time to process stop data {} msec", timer.elapsedMsec());
+			
+			return true;
 
+		} catch (JSONException e) {
+			logger.error("Exception when processing DoubleMap stop data from {}. {}", fullUrl, e.getMessage(), e);
+			return false;
+			
+		} catch (IOException e) {
+			logger.error("Exception when processing DoubleMap stop data from {}. {}", fullUrl, e.getMessage(), e);
+			return false;
+			
 		} finally {
 			// Clean up regardless of whether processing was successful
 	        if (in != null) {
 	            try {
 	                in.close();
 	            } catch (IOException e) {
-	                logger.error(e.getMessage());
-	                e.printStackTrace();
+	                logger.error("Exception when closing InputStream after reading DoubleMap stop data from {}. {}", fullUrl, e.getMessage(), e);
 	            }
 	        }			
 		}
@@ -247,15 +293,16 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 
 	/**
 	 * Gets, reads and processes DoubleMap routes feed
-	 * Catch and log exceptions that may be transient, as we'll be trying again periodically 
+	 * Catch and log exceptions that may be transient, as we'll be trying again periodically
+	 * @return true if successful 
 	 */
-	protected void readDoubleMapRouteData() throws MalformedURLException {
+	protected boolean readDoubleMapRouteData() throws MalformedURLException {
 		IntervalTimer timer = new IntervalTimer();
 		InputStream in = null;
 
 		// Get from the AVL feed subclass the URL to use for this feed
 		String fullUrl = routesUrl.getValue();
-		logger.info("Getting route data from feed using url=" + routesUrl);
+		logger.info("Getting DoubleMap route data from feed using url=" + routesUrl);
 
 		try {
 			in = getInputStream(fullUrl);
@@ -263,28 +310,32 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 	
 			timer.resetTimer();
 	
-			// Clear the route lookup and rebuild it
-			routeLookup.clear();
-			processRouteData(in);
+			// Update the route lookup
+			String jsonStr = getJsonString(in);
+			JSONArray doubleMapRoutes = new JSONArray(jsonStr);
+			HashMap<Integer, String> newRouteLookup = processRouteData(doubleMapRoutes);
+			routeLookup.putAll(newRouteLookup);
+			
 			logger.debug("Time to process route data {} msec", timer.elapsedMsec());
 			logger.debug("routeLookup: {}", routeLookup);
+			
+			return true;
 
 		} catch (JSONException e) {
-			logger.error(e.getMessage());
-			e.printStackTrace();
-
+			logger.error("Exception when processing DoubleMap route data from {}. {}", fullUrl, e.getMessage(), e);
+			return false;
+			
 		} catch (IOException e) {
-			logger.error(e.getMessage());
-			e.printStackTrace();
-	
+			logger.error("Exception when processing DoubleMap route data from {}. {}", fullUrl, e.getMessage(), e);
+			return false;
+			
 		} finally {
 			// Clean up regardless of whether processing was successful
 	        if (in != null) {
 	            try {
 	                in.close();
 	            } catch (IOException e) {
-	                logger.error(e.getMessage());
-	                e.printStackTrace();
+	                logger.error("Exception when closing InputStream after reading DoubleMap route data from {}. {}", fullUrl, e.getMessage(), e);
 	            }
 	        }			
 		}
@@ -298,11 +349,10 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 	 * attribute, which (should) match the GTFS stop_id. This feed is meant to be processed once per session,
 	 * which in this case means when this module starts (when TheTransitClock starts)
 	 * 
-	 * @param in, The JSON feed
+	 * @param stops, The parsed JSON data from the DoubleMap /stops endpoint
 	 */
-	private void processStopData(InputStream in) throws JSONException, IOException {
-		String jsonStr = getJsonString(in);
-		JSONArray stops = new JSONArray(jsonStr);
+	private HashMap<Integer, String> processStopData(JSONArray stops) throws JSONException {
+		HashMap<Integer, String> newStopLookup = new HashMap<Integer, String> ();
 		
 		for (int i = 0; i < stops.length(); i++) {
 			JSONObject stop = stops.getJSONObject(i);
@@ -312,18 +362,20 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 			String code = stop.getString("code");
 
 			if (code.equals(null)) {
-				logger.error("Stop with DoubleMap id={}: `code` is missing or null. Not adding to lookup. stop={}", id, stop);
+				logger.warn("Stop with DoubleMap id={}: `code` is missing or null. Not adding to lookup. stop={}", id, stop);
 				continue;
 			}
 			
 			Stop gtfsStop = Core.getInstance().getDbConfig().getStop(code);
 			if (gtfsStop == null) {
-				logger.error("Stop with DoubleMap id={}, code={}; no matching GTFS stop found. Not adding to lookup. stop={}", id, code, stop);
+				logger.warn("Stop with DoubleMap id={}, code={}; no matching GTFS stop found. Not adding to lookup. stop={}", id, code, stop);
 				continue;
 			}
 
-			stopLookup.put(id, code);
+			newStopLookup.put(id, code);
 		}
+		
+		return newStopLookup;
 	}
 
 	/**
@@ -339,12 +391,11 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 	 * Instead, we construct a Set of stop ids, convert those to GTFS stop ids, and intersect that with 
 	 * the Set of GTFS stop ids for each route to find potential matches.
 	 * 
-	 * @param in
+	 * @param stops, The parsed JSON data from the DoubleMap /routes endpoint
 	 */
-	private void processRouteData(InputStream in) throws JSONException, IOException {
-		String jsonStr = getJsonString(in);
-		JSONArray doubleMapRoutes = new JSONArray(jsonStr);
-
+	private HashMap<Integer, String> processRouteData(JSONArray doubleMapRoutes) throws JSONException {
+		HashMap<Integer, String> newRouteLookup = new HashMap<Integer, String> ();
+		
 		// Create a map between all GTFS routes and the GTFS stop_ids associated with them via trips
 		HashMap<Route, HashSet<String>> stopIdsByRoute = new HashMap<Route, HashSet<String>> ();
 		List<Route> gtfsRoutes = Core.getInstance().getDbConfig().getRoutes();
@@ -373,7 +424,7 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 			// Convert to GTFS stop ids (strings)
 			Set<String> subset = getGtfsStopIds(uniqueDoubleMapStopIds);
 			if (uniqueDoubleMapStopIds.size() != subset.size()) {
-				logger.error("Unable to convert all DoubleMap stop ids (count={}) to GTFS stop_ids (count={}). Not adding DoubleMap route id={} to lookup.", doubleMapStopIds.length(), subset.size(), doubleMapRouteId);
+				logger.warn("Unable to convert all DoubleMap stop ids (count={}) to GTFS stop_ids (count={}). Not adding DoubleMap route id={} to lookup.", doubleMapStopIds.length(), subset.size(), doubleMapRouteId);
 				logger.info("-----Finished processing DoubleMap route id={}", doubleMapRouteId);
 				continue;
 			}
@@ -387,17 +438,19 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 				for (Route route : possibleRoutes) {
 					logger.debug("Found single route match for DoubleMap route id={}, GTFS route_id={}. Adding to lookup. subset={}, superset={}", 
 							doubleMapRouteId, route.getId(), subset, stopIdsByRoute.get(route));
-					routeLookup.put(doubleMapRouteId, route.getId());
+					newRouteLookup.put(doubleMapRouteId, route.getId());
 				}
 			} else if (possibleRoutes.size() > 1) {
-				logger.error("Found multiple route matches ({}) for DoubleMap route id = {}. Not adding to lookup. possibleRoutes={}", 
+				logger.warn("Found multiple route matches ({}) for DoubleMap route id = {}. Not adding to lookup. possibleRoutes={}", 
 						possibleRoutes.size(), doubleMapRouteId, possibleRoutes);
 			} else {
-				logger.error("Unable to find route match for DoubleMap route id = {}", doubleMapRouteId);
+				logger.warn("Unable to find route match for DoubleMap route id = {}", doubleMapRouteId);
 			}
 			
 			logger.info("-----Finished processing DoubleMap route id={}", doubleMapRouteId);
 		}
+		
+		return newRouteLookup;
 	}
 
 	/**
@@ -435,7 +488,7 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 		
 		// if subset is empty, warn and don't match to anything
 		if (subset.isEmpty()) {
-			logger.warn("Tried to get possible routes without stop_ids. Returning no matches.");
+			logger.warn("Tried to get possible DoubleMap routes without stop_ids. Returning no matches.");
 			return possibleRoutes;
 		}
 		
