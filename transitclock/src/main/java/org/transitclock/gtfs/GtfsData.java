@@ -38,6 +38,7 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.transitclock.config.BooleanConfigValue;
 import org.transitclock.config.DoubleConfigValue;
 import org.transitclock.config.IntegerConfigValue;
 import org.transitclock.config.StringConfigValue;
@@ -242,6 +243,15 @@ public class GtfsData {
 			+ "if want to filter out two names. The default value "
 			+ "of null causes all trips to be included.");
 	private static Pattern tripIdFilterRegExPattern = null;
+	
+	private static BooleanConfigValue filterOutPastGtfsData =
+			new BooleanConfigValue(
+					"transitclock.gtfs.filterOutPastGtfsData", 
+					true,
+					"True if GTFS entities that are strictly in the past (i.e. "
+					+ "do not have any valid future service) should be "
+					+ "filtered out. Set to false to import all data "
+					+ "regardless of future service.");	
 	
 	private static IntegerConfigValue stopCodeBaseValue = 
 			new IntegerConfigValue("transitclock.gtfs.stopCodeBaseValue", 
@@ -1326,8 +1336,8 @@ public class GtfsData {
 		}
 		
 		// If the service ID for the trip is not valid in the future 
-		// then don't need to process this Trip				
-		if (!validServiceIds.contains(gtfsTrip.getServiceId())) {
+		// then don't need to process this Trip (unless config says to)				
+		if (filterOutPastGtfsData.getValue() && !validServiceIds.contains(gtfsTrip.getServiceId())) {
 			// ServiceUtils ID not valid for this trip so log warning message
 			// and continue on to next trip ID
 			logger.warn("For tripId={} and serviceId={} the " +
@@ -2098,7 +2108,8 @@ public class GtfsData {
 			// it and not store it. This can be useful because an agency might
 			// not clean out old dates from the calendar_dates.txt file even
 			// if they are no longer useful.			
-			if (calendarDate.getDate().getTime() + 1*Time.DAY_IN_MSECS < 
+			if (filterOutPastGtfsData.getValue() && 
+					calendarDate.getDate().getTime() + 1*Time.DAY_IN_MSECS < 
 					System.currentTimeMillis()) 
 				continue;
 
@@ -2129,7 +2140,7 @@ public class GtfsData {
 		// Create set of service IDs from the calendar.txt data
 		validServiceIds = new HashSet<String>();
 		for (Calendar calendar : calendars) {
-			if (isCalendarActiveInTheFuture(calendar, calendarDates)) {
+			if (!filterOutPastGtfsData.getValue() || isCalendarActiveInTheFuture(calendar, calendarDates)) {
 				validServiceIds.add(calendar.getServiceId());
 			} else {
 				logger.warn("The service ID {} is not configured for in the " +
@@ -2143,7 +2154,7 @@ public class GtfsData {
 		// Add in service IDs that might be in calendar_date.txt but not in 
 		// calendar.txt file
 		for (CalendarDate calendarDate : calendarDates) {
-			if (isCalendarDateActiveInTheFuture(calendarDate))
+			if (!filterOutPastGtfsData.getValue() || isCalendarDateActiveInTheFuture(calendarDate))
 				validServiceIds.add(calendarDate.getServiceId());
 		}
 	}
