@@ -89,6 +89,21 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 			new IntegerConfigValue("transitclock.avl.doubleMapRoutesPollingRateSecs", 300,
 					"How frequently the DoubleMap routes feed should be polled for new data. Should be at least 5 minutes (300 seconds) per API documentation.");
 
+	/**
+	 * How many additional stops to allow in the DoubleMap route info after matching with a potential GTFS route.
+	 * Suggest starting at 0 and seeing if all routes match, but set to a higher number to loosen how strict the matching is.
+	 * If it's too high, will get multiple potential matches, which will result in not adding that route to the lookup.
+	 * @return 
+	 */
+	public static int getAllowedMismatchedStops() {
+		return allowedMismatchedStops.getValue();
+	}
+	private static IntegerConfigValue allowedMismatchedStops =
+			new IntegerConfigValue("transitclock.avl.doubleMapAllowedMismatchedStops", 0,
+					"How many additional stops to allow in the DoubleMap route info after matching with a potential GTFS route. "
+					+ "Suggest starting at 0 and seeing if all routes match, but can set to a higher number to loosen how strict the matching is. "
+					+ "If it's too high, will get multiple potential matches, which will result in not adding that route to the lookup.");
+
 	IntervalTimer routesFeedPollingTimer = new IntervalTimer();
 	
 	// If debugging feed and want to not actually process
@@ -368,8 +383,10 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 			
 			Stop gtfsStop = Core.getInstance().getDbConfig().getStop(code);
 			if (gtfsStop == null) {
-				logger.warn("Stop with DoubleMap id={}, code={}; no matching GTFS stop found. Not adding to lookup. stop={}", id, code, stop);
-				continue;
+				// This shouldn't happen, so it should be logged and investigated,
+				// but when GTFS static files changeover it's possible to have a few hangers-on from the previous version.
+				// Still want to add this to the lookup, in case it's referenced in a DoubleMap route.
+				logger.warn("Stop with DoubleMap id={}, code={}; no matching GTFS stop found. stop={}", id, code, stop);
 			}
 
 			newStopLookup.put(id, code);
@@ -501,6 +518,11 @@ public class DoubleMapAvlModule extends PollUrlAvlModule {
 		    if (intersection.equals(subset)) {
 		    	logger.debug("Found potential route match: {}", route.getId());
 		    	possibleRoutes.add(route);
+		    } else if (intersection.size() > 1
+		    		&& subset.size() - intersection.size() <= getAllowedMismatchedStops()) {
+		    	// If there's some overlap between the sets (at least 2 stops), and the difference is within the allowed bounds, keep this as a possible match
+	    		logger.debug("Found potential route match: {}. {} mismatched stops: {}", route.getId(), subset.size() - intersection.size(), intersection);
+	    		possibleRoutes.add(route);
 		    }
 		}
 		
