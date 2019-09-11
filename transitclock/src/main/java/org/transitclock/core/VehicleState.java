@@ -401,7 +401,7 @@ public class VehicleState {
 				logger.debug("Not arrival so not incrementing trip counter : {}", event);
 			}
 		}else
-		if(getPreviousMatch() !== null && getPreviousMatch().getStopPathIndex()>event.getStopPathIndex())
+		if(getPreviousMatch() != null && getPreviousMatch().getStopPathIndex()>event.getStopPathIndex())
 		{
 			vehicleState.incrementTripCounter();
 			logger.debug("Setting vehicle counter to : {} because of event : {}",vehicleState.getTripCounter(), event);
