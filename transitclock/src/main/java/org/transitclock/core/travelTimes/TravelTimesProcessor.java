@@ -112,7 +112,7 @@ public class TravelTimesProcessor {
 		return maxTravelTimeSegmentLength.getValue();
 	}
 	private static DoubleConfigValue maxTravelTimeSegmentLength =
-			new DoubleConfigValue("transitclock.traveltimes.maxTravelTimeSegmentLength",
+			new DoubleConfigValue("transitclock.travelTimes.maxTravelTimeSegmentLength",
 					250.0,
 					"The longest a travel time segment can be. If a stop path "
 					+ "is longer than this distance then it will be divided "
@@ -122,7 +122,7 @@ public class TravelTimesProcessor {
 		return minSegmentSpeedMps.getValue();
 	}
 	private static DoubleConfigValue minSegmentSpeedMps =
-			new DoubleConfigValue("transitclock.traveltimes.minSegmentSpeedMps",
+			new DoubleConfigValue("transitclock.travelTimes.minSegmentSpeedMps",
 					0.0,
 					"If a travel time segment is determined to have a lower "
 					+ "speed than this value in meters/sec then the travel time"
@@ -131,7 +131,7 @@ public class TravelTimesProcessor {
 					+ "bad data.");
 	
 	private static DoubleConfigValue maxSegmentSpeedMps =
-			new DoubleConfigValue("transitclock.traveltimes.maxSegmentSpeedMps",
+			new DoubleConfigValue("transitclock.travelTimes.maxSegmentSpeedMps",
 					27.0, // 27.0m/s = 60mph
 					"If a travel time segment is determined to have a higher "
 					+ "speed than this value in meters/second then the travel "
