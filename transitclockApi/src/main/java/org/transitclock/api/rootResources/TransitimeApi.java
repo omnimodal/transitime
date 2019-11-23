@@ -40,6 +40,7 @@ import org.transitclock.api.data.ApiActiveBlocksRoutes;
 import org.transitclock.api.data.ApiAdherenceSummary;
 import org.transitclock.api.data.ApiAgencies;
 import org.transitclock.api.data.ApiAgency;
+import org.transitclock.api.data.ApiArrivalDepartures;
 import org.transitclock.api.data.ApiBlock;
 import org.transitclock.api.data.ApiBlocks;
 import org.transitclock.api.data.ApiBlocksTerse;
@@ -67,6 +68,7 @@ import org.transitclock.core.TemporalDifference;
 import org.transitclock.db.structs.Agency;
 import org.transitclock.db.structs.Location;
 import org.transitclock.ipc.data.IpcActiveBlock;
+import org.transitclock.ipc.data.IpcArrivalDeparture;
 import org.transitclock.ipc.data.IpcBlock;
 import org.transitclock.ipc.data.IpcCalendar;
 import org.transitclock.ipc.data.IpcDirectionsForRoute;
@@ -79,7 +81,6 @@ import org.transitclock.ipc.data.IpcServerStatus;
 import org.transitclock.ipc.data.IpcTrip;
 import org.transitclock.ipc.data.IpcTripPattern;
 import org.transitclock.ipc.data.IpcVehicle;
-import org.transitclock.ipc.data.IpcVehicleComplete;
 import org.transitclock.ipc.data.IpcVehicleConfig;
 import org.transitclock.ipc.interfaces.ConfigInterface;
 import org.transitclock.ipc.interfaces.PredictionsInterface;
@@ -91,8 +92,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.servers.Server;
-import io.swagger.v3.oas.annotations.servers.ServerVariable;
-import io.swagger.v3.oas.annotations.servers.Servers;
 
 //import io.swagger.annotations.Api;
 //import io.swagger.annotations.ApiOperation;
@@ -1745,6 +1744,32 @@ public class TransitimeApi {
 		
 		return stdParameters.createResponse(new ApiCurrentServerDate(currentTime));
 	}
+
+	@Path("/command/arrivalDepartures")
+	@GET
+	@Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+	@Operation(summary="Returns data for ArrivalDepartures specified via the query string.",description="Returns data for ArrivalDepartures specified via the query string",tags= {"arrival","departure"})
+	public Response getArrivalDepartures(@BeanParam StandardParameters stdParameters,
+			@Parameter(description="Specify begin time.", required=true) @QueryParam(value = "beginTime") DateTimeParam beginTime,
+			@Parameter(description="Specify end time.", required=true) @QueryParam(value = "endTime") DateTimeParam endTime,
+			@Parameter(description="List of routeId or routeShortName. Example: r=1&r=2" ,required=false) @QueryParam(value = "r") List<String> routeIdsOrShortNames
+			) throws WebApplicationException {
+		// Make sure request is valid
+		stdParameters.validate();
+		
+		try {
+			// Get ArrivalDeparture data from server
+			ConfigInterface inter = stdParameters.getConfigInterface();
+			List<IpcArrivalDeparture> arrivalDepartures = inter.getArrivalDepartures(beginTime.getDate(), endTime.getDate(), routeIdsOrShortNames);
+
+			ApiArrivalDepartures apiArrivalDepartures = new ApiArrivalDepartures(arrivalDepartures);
+			return stdParameters.createResponse(apiArrivalDepartures);
+		} catch (Exception e) {
+			// If problem getting data then return a Bad Request
+			throw WebUtils.badRequestException(e);
+		}
+	}	
+	
 	// /**
 	// * For creating response of list of vehicles. Would like to make this a
 	// * generic type but due to type erasure cannot do so since GenericEntity

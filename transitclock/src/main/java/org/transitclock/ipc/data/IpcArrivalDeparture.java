@@ -1,12 +1,10 @@
 package org.transitclock.ipc.data;
 
 import java.io.Serializable;
-import java.lang.reflect.InvocationTargetException;
 import java.util.Date;
 
 import javax.xml.bind.annotation.XmlAttribute;
 
-import org.apache.commons.beanutils.BeanUtils;
 import org.transitclock.db.structs.ArrivalDeparture;
 /**
  * For IPC for obtaining arrival and departure events for a stop that are in the cache.
@@ -55,16 +53,21 @@ public class IpcArrivalDeparture implements Serializable {
 	@XmlAttribute
 	private float stopPathLength;
 	
-	public IpcArrivalDeparture(ArrivalDeparture arrivalDepature) throws Exception {
-		
-		this.vehicleId=arrivalDepature.getVehicleId();
-		this.time=new Date(arrivalDepature.getTime());
-		this.routeId=arrivalDepature.getRouteId();
-		this.tripId=arrivalDepature.getTripId();
-		this.isArrival=arrivalDepature.isArrival();
-		this.stopId=arrivalDepature.getStopId();
-		this.stopPathIndex=arrivalDepature.getStopPathIndex();
-		this.scheduledTime=arrivalDepature.getScheduledDate();
+	public IpcArrivalDeparture(ArrivalDeparture arrivalDeparture) throws Exception {
+		this.vehicleId=arrivalDeparture.getVehicleId();
+		this.time=new Date(arrivalDeparture.getTime());
+		this.routeId=arrivalDeparture.getRouteId();
+		this.tripId=arrivalDeparture.getTripId();
+		this.isArrival=arrivalDeparture.isArrival();
+		this.stopId=arrivalDeparture.getStopId();
+		this.stopPathIndex=arrivalDeparture.getStopPathIndex();
+		this.scheduledTime=arrivalDeparture.getScheduledDate();
+		this.gtfsStopSeq=arrivalDeparture.getGtfsStopSequence();
+		this.avlTime=arrivalDeparture.getAvlTime();
+		this.blockId=arrivalDeparture.getBlockId();
+		this.routeShortName=arrivalDeparture.getRouteShortName();
+		this.serviceId=arrivalDeparture.getServiceId();
+		this.directionId=arrivalDeparture.getDirectionId();
 	}
 	
 	@Override

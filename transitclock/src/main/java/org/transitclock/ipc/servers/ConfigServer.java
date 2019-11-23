@@ -18,16 +18,24 @@
 package org.transitclock.ipc.servers;
 
 import java.rmi.RemoteException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.transitclock.applications.Core;
+import org.transitclock.core.dataCache.ArrivalDepartureComparator;
 import org.transitclock.core.dataCache.VehicleDataCache;
+import org.transitclock.core.travelTimes.DataFetcher;
 import org.transitclock.db.structs.Agency;
+import org.transitclock.db.structs.ArrivalDeparture;
 import org.transitclock.db.structs.Block;
 import org.transitclock.db.structs.Calendar;
 import org.transitclock.db.structs.Route;
@@ -35,6 +43,7 @@ import org.transitclock.db.structs.Trip;
 import org.transitclock.db.structs.TripPattern;
 import org.transitclock.db.structs.VehicleConfig;
 import org.transitclock.gtfs.DbConfig;
+import org.transitclock.ipc.data.IpcArrivalDeparture;
 import org.transitclock.ipc.data.IpcBlock;
 import org.transitclock.ipc.data.IpcCalendar;
 import org.transitclock.ipc.data.IpcDirectionsForRoute;
@@ -45,6 +54,7 @@ import org.transitclock.ipc.data.IpcTrip;
 import org.transitclock.ipc.data.IpcTripPattern;
 import org.transitclock.ipc.interfaces.ConfigInterface;
 import org.transitclock.ipc.rmi.AbstractServer;
+import org.transitclock.utils.Time;
 
 /**
  * Implements ConfigInterface to serve up configuration information to RMI
@@ -436,4 +446,51 @@ public class ConfigServer extends AbstractServer implements ConfigInterface {
 		return blockIds;
 	}
 
+	@Override
+	public List<IpcArrivalDeparture> getArrivalDepartures(LocalDateTime localBeginTime, LocalDateTime localEndTime, List<String> routeIdsOrShortNames)
+			throws RemoteException {
+
+		try {
+			List<ArrivalDeparture> result = new ArrayList<ArrivalDeparture>();
+			
+			Date beginTime = Date.from(localBeginTime.atZone(ZoneId.systemDefault()).toInstant());
+			Date endTime = Date.from(localEndTime.atZone(ZoneId.systemDefault()).toInstant());
+			DataFetcher dataFetcher = new DataFetcher(getAgencyId(), null);
+			dataFetcher.readData(getAgencyId(), beginTime, endTime);
+			Collection<List<ArrivalDeparture>> arrivalDepartures =
+					dataFetcher.getArrivalDepartureMap().values();
+
+			// If no route specified then return data for all routes
+			if (routeIdsOrShortNames == null || routeIdsOrShortNames.isEmpty()) {
+				for (List<ArrivalDeparture> arrDepList : arrivalDepartures) {
+					result.addAll(arrDepList);
+				}
+			} else {
+				// Routes specified so return data for those routes
+				List<IpcRoute> routes = getRoutes(routeIdsOrShortNames);
+				List<String> routeIds = routes.stream().map(route -> route.getId()).collect(Collectors.toCollection(ArrayList::new));
+				for (List<ArrivalDeparture> arrDepList : arrivalDepartures) {
+					for (ArrivalDeparture arrivalDeparture : arrDepList) {
+						if (routeIds.contains(arrivalDeparture.getRouteId())) {
+							result.add(arrivalDeparture);
+						}
+					}
+				}
+			}
+			
+			List<IpcArrivalDeparture> ipcResultList = new ArrayList<IpcArrivalDeparture>();
+
+			Collections.sort(result, new ArrivalDepartureComparator());
+
+			for (ArrivalDeparture arrivalDeparture : result) {
+				ipcResultList.add(new IpcArrivalDeparture(arrivalDeparture));
+			}
+
+			return ipcResultList;
+
+		} catch (Exception e) {
+
+			throw new RemoteException(e.toString(), e);
+		}
+	}
 }

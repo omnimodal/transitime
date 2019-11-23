@@ -956,6 +956,10 @@ public class ArrivalDeparture implements Lifecycle, Serializable  {
 		return routeId;
 	}
 
+	public String getRouteShortName() {
+		return routeShortName;
+	}
+
 	public String getServiceId() {
 		return serviceId;
 	}

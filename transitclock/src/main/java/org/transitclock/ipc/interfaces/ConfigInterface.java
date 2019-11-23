@@ -19,10 +19,12 @@ package org.transitclock.ipc.interfaces;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
 import org.transitclock.db.structs.Agency;
+import org.transitclock.ipc.data.IpcArrivalDeparture;
 import org.transitclock.ipc.data.IpcBlock;
 import org.transitclock.ipc.data.IpcCalendar;
 import org.transitclock.ipc.data.IpcDirectionsForRoute;
@@ -224,4 +226,12 @@ public interface ConfigInterface extends Remote {
 	public List<String> getBlockIds(String serviceId)
 			throws RemoteException;	
 
+	/**
+	 * Return the arrivals and departures between a specific begin and end time for specified routes
+	 * @param date
+	 * @return
+	 * @throws RemoteException
+	 */
+	public List<IpcArrivalDeparture> getArrivalDepartures(LocalDateTime beginTime, LocalDateTime endTime, List<String> routeIdsOrShortNames)
+		throws RemoteException;
 }
