@@ -444,11 +444,26 @@ public class DataFetcher {
 	 * Lists of ArrivalDeparture times, one list for each trip where there was
 	 * historic data.
 	 * 
+	 * Call with no args to throw RuntimeException if arrivalDepartureMap is
+	 * null.
+	 * 
 	 * @return arrival/departure data
 	 */
 	public Map<DbDataMapKey, List<ArrivalDeparture>> getArrivalDepartureMap() {
+		return getArrivalDepartureMap(false);
+	}
+
+	/**
+	 * Provides the arrival/departure data in a map. The values in the map are
+	 * Lists of ArrivalDeparture times, one list for each trip where there was
+	 * historic data.
+	 * 
+	 * @param returnNull
+	 * @return arrival/departure data
+	 */
+	public Map<DbDataMapKey, List<ArrivalDeparture>> getArrivalDepartureMap(boolean returnNull) {
 		// Make sure data was read in
-		if (arrivalDepartureMap == null)
+		if (arrivalDepartureMap == null && !returnNull)
 			throw new RuntimeException("Called getArrivalDepartureMap() before "
 					+ "data was read in using readData().");
 		

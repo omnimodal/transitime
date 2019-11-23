@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -34,6 +35,7 @@ import org.transitclock.applications.Core;
 import org.transitclock.core.dataCache.ArrivalDepartureComparator;
 import org.transitclock.core.dataCache.VehicleDataCache;
 import org.transitclock.core.travelTimes.DataFetcher;
+import org.transitclock.core.travelTimes.DataFetcher.DbDataMapKey;
 import org.transitclock.db.structs.Agency;
 import org.transitclock.db.structs.ArrivalDeparture;
 import org.transitclock.db.structs.Block;
@@ -452,13 +454,20 @@ public class ConfigServer extends AbstractServer implements ConfigInterface {
 
 		try {
 			List<ArrivalDeparture> result = new ArrayList<ArrivalDeparture>();
+			List<IpcArrivalDeparture> ipcResultList = new ArrayList<IpcArrivalDeparture>();
 			
 			Date beginTime = Date.from(localBeginTime.atZone(ZoneId.systemDefault()).toInstant());
 			Date endTime = Date.from(localEndTime.atZone(ZoneId.systemDefault()).toInstant());
 			DataFetcher dataFetcher = new DataFetcher(getAgencyId(), null);
 			dataFetcher.readData(getAgencyId(), beginTime, endTime);
-			Collection<List<ArrivalDeparture>> arrivalDepartures =
-					dataFetcher.getArrivalDepartureMap().values();
+			Map<DbDataMapKey, List<ArrivalDeparture>> arrivalDepartureMap = dataFetcher.getArrivalDepartureMap(true);
+			
+			// If null or empty, no results so return empty list
+			if (arrivalDepartureMap == null || arrivalDepartureMap.isEmpty()) {
+				return ipcResultList;
+			}
+			
+			Collection<List<ArrivalDeparture>> arrivalDepartures = arrivalDepartureMap.values();
 
 			// If no route specified then return data for all routes
 			if (routeIdsOrShortNames == null || routeIdsOrShortNames.isEmpty()) {
@@ -478,8 +487,6 @@ public class ConfigServer extends AbstractServer implements ConfigInterface {
 				}
 			}
 			
-			List<IpcArrivalDeparture> ipcResultList = new ArrayList<IpcArrivalDeparture>();
-
 			Collections.sort(result, new ArrivalDepartureComparator());
 
 			for (ArrivalDeparture arrivalDeparture : result) {
